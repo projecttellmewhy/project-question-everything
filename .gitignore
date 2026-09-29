@@ -1,0 +1,22 @@
+# Dependencies & cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Operating system files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs and scratch
+*.log
+*.tmp
+.system_generated/
+scratch/
+
+# IDE / Editors
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
