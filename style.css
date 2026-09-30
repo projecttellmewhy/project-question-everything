@@ -43,6 +43,8 @@ body {
   background-color: var(--bg-primary);
   color: var(--text-primary);
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
   line-height: 1.5;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
@@ -555,9 +557,17 @@ button, input, textarea, select {
    Page Main Container
    ========================================================================== */
 .page-main {
+  width: 100%;
   max-width: 1360px;
   margin: 0 auto;
   padding: 40px 32px 80px;
+  flex: 1 0 auto;
+  box-sizing: border-box;
+}
+
+footer {
+  margin-top: auto;
+  width: 100%;
 }
 
 .page-hero {
