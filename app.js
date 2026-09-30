@@ -12,7 +12,8 @@ let appState = {
   notes: {},
   quizScores: {},
   activeCategory: 'All', // 'All' or specific path id (e.g., 'path-physics-unit-a')
-  searchQuery: ''
+  searchQuery: '',
+  currentUser: null
 };
 
 function loadState() {
@@ -55,12 +56,6 @@ function initHeader() {
     });
   }
 
-  // Profile avatar click
-  const avatarBtn = document.getElementById('user-avatar-btn');
-  if (avatarBtn) {
-    avatarBtn.addEventListener('click', () => openProfileModal());
-  }
-
   // Nav Items
   document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', (e) => {
@@ -69,6 +64,8 @@ function initHeader() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     });
   });
+
+  renderNavbarAuth();
 }
 
 // -----------------------------------------------------------------------------
@@ -1015,9 +1012,246 @@ function renderCourseNotes(course, container) {
 }
 
 // -----------------------------------------------------------------------------
+// Authentication System & Navbar Controls
+// -----------------------------------------------------------------------------
+function getInitials(name) {
+  if (!name) return 'NL';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
+function renderNavbarAuth() {
+  const container = document.getElementById('header-auth-container');
+  if (!container) return;
+
+  if (!appState.currentUser) {
+    container.innerHTML = `
+      <button class="nav-signin-btn" onclick="openAuthModal('signin')">Sign In</button>
+      <button class="nav-signup-btn" onclick="openAuthModal('signup')">Get Started</button>
+    `;
+  } else {
+    const user = appState.currentUser;
+    const initials = getInitials(user.name);
+    container.innerHTML = `
+      <div class="user-menu-wrapper">
+        <button class="user-menu-btn" id="user-menu-btn" onclick="toggleAuthDropdown(event)">
+          <div class="avatar-btn" style="width: 30px; height: 30px; font-size: 12px; border: none;">
+            ${initials}
+          </div>
+          <span class="user-menu-name">${escapeHtml(user.name)}</span>
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path d="M19 9l-7 7-7-7" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+
+        <div class="auth-dropdown" id="auth-dropdown">
+          <div class="dropdown-user-info">
+            <div class="avatar-btn" style="width: 44px; height: 44px; font-size: 16px; border: none; flex-shrink: 0;">
+              ${initials}
+            </div>
+            <div style="overflow: hidden;">
+              <div style="font-weight: 800; color: #fff; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                ${escapeHtml(user.name)}
+              </div>
+              <div style="font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                ${escapeHtml(user.email)}
+              </div>
+            </div>
+          </div>
+
+          <button class="dropdown-item" onclick="openProfileModal(); hideAuthDropdown();">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+            My Learning Profile
+          </button>
+
+          <button class="dropdown-item" onclick="openTodayModal(); hideAuthDropdown();">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            Daily Physics Challenge
+          </button>
+
+          <div style="height: 1px; background: rgba(255,255,255,0.08); margin: 8px 0;"></div>
+
+          <button class="dropdown-item danger" onclick="handleSignOut()">
+            <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+            Sign Out
+          </button>
+        </div>
+      </div>
+    `;
+  }
+}
+
+window.toggleAuthDropdown = function(e) {
+  if (e) e.stopPropagation();
+  const dd = document.getElementById('auth-dropdown');
+  if (dd) dd.classList.toggle('show');
+};
+
+window.hideAuthDropdown = function() {
+  const dd = document.getElementById('auth-dropdown');
+  if (dd) dd.classList.remove('show');
+};
+
+document.addEventListener('click', (e) => {
+  const wrapper = document.querySelector('.user-menu-wrapper');
+  if (wrapper && !wrapper.contains(e.target)) {
+    hideAuthDropdown();
+  }
+});
+
+window.handleSignOut = function() {
+  hideAuthDropdown();
+  appState.currentUser = null;
+  saveState();
+  renderNavbarAuth();
+  showToast('Signed Out', 'You have been signed out successfully.');
+};
+
+window.currentAuthTab = 'signin';
+
+window.openAuthModal = function(initialTab = 'signin') {
+  createGenericModal(`
+    <div style="padding: 24px 20px;">
+      <div style="text-align: center; margin-bottom: 20px;">
+        <div style="width: 48px; height: 48px; border-radius: 14px; background: linear-gradient(135deg, #3b82f6, #4f5df5); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 12px; box-shadow: 0 4px 16px rgba(59,130,246,0.3);">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2">
+            <path d="M12 2L3 7.5v9L12 22l9-5.5v-9L12 2z"/>
+          </svg>
+        </div>
+        <h3 id="auth-modal-title" style="font-size: 22px; font-weight: 800; color: #fff; margin: 0 0 4px;">Welcome to NovaLearn</h3>
+        <p style="font-size: 13px; color: var(--text-secondary); margin: 0;">Master physics through interactive visual learning</p>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="auth-tab-btn ${initialTab === 'signin' ? 'active' : ''}" id="tab-btn-signin" onclick="switchAuthTab('signin')">Sign In</button>
+        <button class="auth-tab-btn ${initialTab === 'signup' ? 'active' : ''}" id="tab-btn-signup" onclick="switchAuthTab('signup')">Create Account</button>
+      </div>
+
+      <form id="auth-form" onsubmit="handleAuthSubmit(event)">
+        <div class="auth-form-group" id="group-name" style="display: ${initialTab === 'signup' ? 'block' : 'none'};">
+          <label>Full Name</label>
+          <input type="text" id="auth-name-input" class="auth-input" placeholder="e.g. Alex Newton">
+        </div>
+
+        <div class="auth-form-group">
+          <label>Email Address</label>
+          <input type="email" id="auth-email-input" class="auth-input" placeholder="alex@physics.edu" required>
+        </div>
+
+        <div class="auth-form-group">
+          <label>Password</label>
+          <input type="password" id="auth-pass-input" class="auth-input" placeholder="••••••••" required>
+        </div>
+
+        <button type="submit" id="auth-submit-btn" class="nav-signup-btn" style="width: 100%; padding: 12px; border-radius: 10px; font-size: 15px; margin-top: 8px;">
+          ${initialTab === 'signin' ? 'Sign In' : 'Create Account'}
+        </button>
+      </form>
+
+      <div style="display: flex; align-items: center; gap: 12px; margin: 20px 0;">
+        <div style="flex: 1; height: 1px; background: rgba(255,255,255,0.1);"></div>
+        <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">OR CONTINUE WITH</span>
+        <div style="flex: 1; height: 1px; background: rgba(255,255,255,0.1);"></div>
+      </div>
+
+      <div class="social-login-row">
+        <button type="button" class="social-auth-btn" onclick="quickSocialLogin('Google')">
+          <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#ea4335" d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.7 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.3 9 5 12 5z"/><path fill="#4285f4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"/><path fill="#fbbc05" d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3s.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 12.3 0 15s.7 5.3 1.9 7.7l3.7-2.9z"/><path fill="#34a853" d="M12 23c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.3-6.4-5.2L1.9 16C3.7 19.7 7.5 23 12 23z"/></svg>
+          Google
+        </button>
+        <button type="button" class="social-auth-btn" onclick="quickSocialLogin('GitHub')">
+          <svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+          GitHub
+        </button>
+      </div>
+
+      <div style="margin-top: 16px; text-align: center;">
+        <button type="button" onclick="quickSocialLogin('Demo')" style="background: none; border: none; color: #38bdf8; font-size: 13px; font-weight: 700; cursor: pointer; text-decoration: underline;">
+          ⚡ Quick Demo Login (Alex Newton)
+        </button>
+      </div>
+    </div>
+  `, 460);
+};
+
+window.switchAuthTab = function(tab) {
+  window.currentAuthTab = tab;
+  const btnSignin = document.getElementById('tab-btn-signin');
+  const btnSignup = document.getElementById('tab-btn-signup');
+  const groupName = document.getElementById('group-name');
+  const submitBtn = document.getElementById('auth-submit-btn');
+
+  if (tab === 'signin') {
+    if (btnSignin) btnSignin.classList.add('active');
+    if (btnSignup) btnSignup.classList.remove('active');
+    if (groupName) groupName.style.display = 'none';
+    if (submitBtn) submitBtn.innerText = 'Sign In';
+  } else {
+    if (btnSignup) btnSignup.classList.add('active');
+    if (btnSignin) btnSignin.classList.remove('active');
+    if (groupName) groupName.style.display = 'block';
+    if (submitBtn) submitBtn.innerText = 'Create Account';
+  }
+};
+
+window.handleAuthSubmit = function(e) {
+  e.preventDefault();
+  const emailInput = document.getElementById('auth-email-input');
+  const nameInput = document.getElementById('auth-name-input');
+
+  const email = emailInput ? emailInput.value.trim() : '';
+  let name = nameInput ? nameInput.value.trim() : '';
+
+  if (!name) {
+    name = email.split('@')[0] || 'Scholar';
+    name = name.charAt(0).toUpperCase() + name.slice(1);
+  }
+
+  appState.currentUser = { name, email };
+  saveState();
+  renderNavbarAuth();
+  closeGenericModal();
+  showToast('Welcome!', `Signed in as ${name}`);
+};
+
+window.quickSocialLogin = function(provider) {
+  let name = 'Alex Newton';
+  let email = 'alex.newton@physics.edu';
+
+  if (provider === 'Google') {
+    name = 'Alex Newton';
+    email = 'alex.newton@gmail.com';
+  } else if (provider === 'GitHub') {
+    name = 'Alex Newton';
+    email = 'alex@github.com';
+  }
+
+  appState.currentUser = { name, email };
+  saveState();
+  renderNavbarAuth();
+  closeGenericModal();
+  showToast(`Signed In via ${provider}`, `Welcome back, ${name}!`);
+};
+
+// -----------------------------------------------------------------------------
 // Modals (Profile, Today)
 // -----------------------------------------------------------------------------
 function openProfileModal() {
+  const user = appState.currentUser || { name: 'NovaLeran Scholar', email: 'Physics & Natural Sciences' };
+  const initials = getInitials(user.name);
   const completed = Object.values(appState.completedCourses).filter(Boolean).length;
   const total = (curriculum.chapters || []).length || 25;
   const percent = Math.round((completed / total) * 100);
@@ -1026,11 +1260,11 @@ function openProfileModal() {
     <div style="padding: 24px;">
       <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px;">
         <div style="width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #4f5df5, #f59e0b); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; color: #fff;">
-          NL
+          ${initials}
         </div>
         <div>
-          <h3 style="font-size: 20px; font-weight: 800; color: #fff; margin: 0;">NovaLeran Scholar</h3>
-          <p style="font-size: 13px; color: var(--text-secondary); margin: 0;">Physics &amp; Natural Sciences</p>
+          <h3 style="font-size: 20px; font-weight: 800; color: #fff; margin: 0;">${escapeHtml(user.name)}</h3>
+          <p style="font-size: 13px; color: var(--text-secondary); margin: 0;">${escapeHtml(user.email)}</p>
         </div>
       </div>
 
