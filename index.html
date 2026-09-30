@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <link rel="stylesheet" href="style.css?v=11">
+  <link rel="stylesheet" href="style.css?v=12">
   <!-- Google Identity Services SDK for Google Sign-In -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -66,12 +66,8 @@
     <div class="learning-paths-controls">
       <!-- Subject Category Filter Buttons -->
       <div class="subject-filter-row">
-        <button class="subject-filter-btn active" data-subject="All">All Paths</button>
-        <button class="subject-filter-btn" data-subject="path-physics-unit-a">Space, Time &amp; Motion</button>
-        <button class="subject-filter-btn" data-subject="path-physics-unit-b">Particulate Matter</button>
-        <button class="subject-filter-btn" data-subject="path-physics-unit-c">Wave Behaviour</button>
-        <button class="subject-filter-btn" data-subject="path-physics-unit-d">Fields</button>
-        <button class="subject-filter-btn" data-subject="path-physics-unit-e">Nuclear &amp; Quantum</button>
+        <button class="subject-filter-btn active" data-subject="All">All</button>
+        <button class="subject-filter-btn" data-subject="path-physics-unit-e">Nuclear Fusion &amp; Stars</button>
       </div>
 
       <!-- Quick Search Bar -->
@@ -79,7 +75,7 @@
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
           <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        <input type="text" id="path-search-input" class="search-input" placeholder="Search physics courses, topics, formulas...">
+        <input type="text" id="path-search-input" class="search-input" placeholder="Search Nuclear fusion and stars...">
       </div>
     </div>
 
@@ -105,18 +101,13 @@
         </span>
       </div>
       <div style="display: flex; flex-wrap: wrap; gap: 20px; font-size: 13px; color: var(--text-secondary);">
-        <a href="#" onclick="filterBySubject('All'); return false;">All Paths</a>
-        <a href="#" onclick="filterBySubject('path-physics-unit-a'); return false;">Space, Time &amp; Motion</a>
-        <a href="#" onclick="filterBySubject('path-physics-unit-b'); return false;">Particulate Matter</a>
-        <a href="#" onclick="filterBySubject('path-physics-unit-c'); return false;">Wave Behaviour</a>
-        <a href="#" onclick="filterBySubject('path-physics-unit-d'); return false;">Fields</a>
-        <a href="#" onclick="filterBySubject('path-physics-unit-e'); return false;">Nuclear &amp; Quantum</a>
+        <a href="#" onclick="filterBySubject('All'); return false;">Nuclear Fusion &amp; Stars</a>
       </div>
     </div>
   </footer>
 
   <!-- Scripts -->
-  <script src="curriculum-data.js?v=11"></script>
-  <script src="app.js?v=11"></script>
+  <script src="curriculum-data.js?v=12"></script>
+  <script src="app.js?v=12"></script>
 </body>
 </html>

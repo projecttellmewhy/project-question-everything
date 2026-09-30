@@ -47,13 +47,14 @@
       return;
     }
 
-    allChapters = data.chapters;
+    allChapters = (data.chapters || []).filter(c => c.id === 'ch-25');
+    if (allChapters.length === 0) allChapters = data.chapters;
 
-    // Get chapter from URL parameter
+    // Get chapter from URL parameter (defaulting to ch-25)
     const urlParams = new URLSearchParams(window.location.search);
-    let chapterId = urlParams.get('id') || 'ch-1';
+    let chapterId = urlParams.get('id') || 'ch-25';
 
-    currentChapter = allChapters.find(c => c.id === chapterId) || allChapters[0];
+    currentChapter = (data.chapters || []).find(c => c.id === chapterId) || allChapters[0];
 
     // Setup UI
     setupHeaderControls();
@@ -71,11 +72,7 @@
     if (selectEl) {
       selectEl.innerHTML = '';
       const units = [
-        { name: 'Unit A: Space, Time & Motion', ids: ['ch-1','ch-2','ch-3','ch-4','ch-5','ch-6'] },
-        { name: 'Unit B: Particulate Matter', ids: ['ch-7','ch-8','ch-9','ch-10','ch-11'] },
-        { name: 'Unit C: Wave Behaviour', ids: ['ch-12','ch-13','ch-14','ch-15','ch-16'] },
-        { name: 'Unit D: Fields', ids: ['ch-17','ch-18','ch-19','ch-20'] },
-        { name: 'Unit E: Nuclear & Quantum', ids: ['ch-21','ch-22','ch-23','ch-24','ch-25'] }
+        { name: 'Nuclear Physics & Stars', ids: ['ch-25'] }
       ];
 
       units.forEach(u => {

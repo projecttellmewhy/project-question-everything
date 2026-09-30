@@ -132,16 +132,30 @@ function renderLearningPaths() {
   const container = document.getElementById('learning-paths-list');
   if (!container) return;
 
-  const paths = curriculum.learningPaths || [];
-  
-  // Filter paths by active subject category or path ID
-  let filteredPaths = appState.activeCategory === 'All'
-    ? paths
-    : paths.filter(p => p.id === appState.activeCategory || p.category === appState.activeCategory);
+  // Only show Nuclear fusion and stars chapter (ch-25)
+  const fusionChapter = (curriculum.chapters || []).find(c => c.id === 'ch-25') || {
+    id: "ch-25",
+    num: 25,
+    title: "Nuclear fusion and stars",
+    subject: "Physics",
+    gradient: "linear-gradient(135deg, #180928, #3b0764)",
+    iconType: "atom"
+  };
 
-  // If search query active, filter courses inside paths
+  const visiblePaths = [
+    {
+      id: 'path-physics-unit-e',
+      title: 'Nuclear Physics & Stars',
+      subtitle: 'Thermonuclear fusion, stellar hydrostatic equilibrium, and stellar evolution',
+      category: 'Science',
+      courses: [fusionChapter]
+    }
+  ];
+
+  // Filter paths by active search query if any
+  let filteredPaths = visiblePaths;
   if (appState.searchQuery) {
-    const q = appState.searchQuery;
+    const q = appState.searchQuery.toLowerCase();
     filteredPaths = filteredPaths.map(p => {
       const matchingCourses = p.courses.filter(c => {
         const titleMatch = c.title.toLowerCase().includes(q);
@@ -156,7 +170,7 @@ function renderLearningPaths() {
     container.innerHTML = `
       <div style="text-align: center; padding: 60px 20px; background: var(--bg-container); border-radius: 16px; border: 1px dashed var(--border-subtle); margin-top: 20px;">
         <h3 style="font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 8px;">No Courses Found</h3>
-        <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px;">Try searching for "Relativity", "Kinematics", "Nuclear", "Thermodynamics", or "Optics".</p>
+        <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px;">Try searching for "Nuclear", "Fusion", or "Stars".</p>
         <button class="action-start-btn" style="margin: 0 auto;" onclick="filterBySubject('All')">Clear Search &amp; Show All</button>
       </div>
     `;
@@ -1109,8 +1123,8 @@ function renderNavbarAuth() {
   } else {
     const user = appState.currentUser;
     const initials = getInitials(user.name);
-    const completed = Object.values(appState.completedCourses).filter(Boolean).length;
-    const total = (curriculum.chapters || []).length || 25;
+    const completed = appState.completedCourses['ch-25'] ? 1 : 0;
+    const total = 1;
     const percent = Math.round((completed / total) * 100);
 
     container.innerHTML = `
