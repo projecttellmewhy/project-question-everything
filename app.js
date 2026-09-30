@@ -195,6 +195,7 @@ function renderLearningPaths() {
       <div class="path-track-container">
         ${path.courses.map(c => {
           const isDone = !!appState.completedCourses[c.id];
+          const branchCount = (c.mindMap?.branches || []).length;
           return `
             <div class="course-tile" data-course-id="${c.id}">
               <div class="tile-box" style="${isDone ? 'border-color: #22c55e;' : ''}">
@@ -203,6 +204,9 @@ function renderLearningPaths() {
                 </div>
               </div>
               <span class="tile-title">${c.title}</span>
+              <span style="font-size: 11px; color: var(--brilliant-sky); display: inline-flex; align-items: center; gap: 4px; opacity: 0.9; margin-top: 1px;">
+                <span>🧠</span> Mind Map ${branchCount ? `&bull; ${branchCount} Branches` : ''}
+              </span>
               ${isDone ? `<span style="font-size: 11px; color: #22c55e; font-weight: 700;">✓ Completed</span>` : ''}
             </div>
           `;
@@ -648,7 +652,8 @@ function openCourseModal(courseId) {
       </div>
 
       <div class="modal-tabs-bar">
-        <button class="tab-btn active" data-tab="syllabus">Syllabus & Lessons</button>
+        <button class="tab-btn active" data-tab="mindmap">🧠 Concept Mind Map</button>
+        <button class="tab-btn" data-tab="syllabus">Syllabus & Lessons</button>
         <button class="tab-btn" data-tab="formulas">Formula Sheet</button>
         <button class="tab-btn" data-tab="sim">Interactive Lab</button>
         <button class="tab-btn" data-tab="quiz">Practice Quiz (${course.quiz ? course.quiz.length : 0} Qs)</button>
@@ -694,10 +699,14 @@ function openCourseModal(courseId) {
     });
   });
 
-  renderModalTabContent('syllabus', course);
+  renderModalTabContent('mindmap', course);
 }
 
 function closeCourseModal() {
+  if (currentMindMapCanvasAnimation) {
+    cancelAnimationFrame(currentMindMapCanvasAnimation);
+    currentMindMapCanvasAnimation = null;
+  }
   const overlay = document.getElementById('brilliant-modal-overlay');
   if (overlay) {
     overlay.style.display = 'none';
@@ -705,13 +714,21 @@ function closeCourseModal() {
   }
 }
 
+let currentMindMapCanvasAnimation = null;
+
 function renderModalTabContent(tab, course) {
+  if (currentMindMapCanvasAnimation) {
+    cancelAnimationFrame(currentMindMapCanvasAnimation);
+    currentMindMapCanvasAnimation = null;
+  }
   const container = document.getElementById('modal-tab-content');
   if (!container) return;
 
   const cleanTitle = course.title.replace(/^Chapter\s+\d+:\s*/i, '');
 
-  if (tab === 'syllabus') {
+  if (tab === 'mindmap') {
+    renderMindMapTab(course, container);
+  } else if (tab === 'syllabus') {
     container.innerHTML = `
       <div style="margin-bottom: 24px;">
         <h4 style="font-size: 15px; font-weight: 700; color: #fff; margin-bottom: 8px;">Concept Overview</h4>
@@ -763,6 +780,717 @@ function renderModalTabContent(tab, course) {
   } else if (tab === 'notes') {
     renderCourseNotes(course, container);
   }
+}
+
+// -----------------------------------------------------------------------------
+// Interactive Concept Mind Map Renderer
+// -----------------------------------------------------------------------------
+function renderMindMapTab(course, container) {
+  if (currentMindMapCanvasAnimation) {
+    cancelAnimationFrame(currentMindMapCanvasAnimation);
+    currentMindMapCanvasAnimation = null;
+  }
+
+  const mindMap = course.mindMap || {
+    core: course.summary,
+    color: '#38bdf8',
+    branches: []
+  };
+
+  const branches = mindMap.branches || [];
+  const branchColors = ['#38bdf8', '#818cf8', '#34d399', '#f59e0b', '#ec4899', '#06b6d4'];
+  
+  const totalConcepts = branches.reduce((sum, b) => sum + (b.subconcepts ? b.subconcepts.length : 0), 0);
+  const totalFormulas = branches.reduce((sum, b) => sum + (b.subconcepts ? b.subconcepts.filter(s => s.formula).length : 0), 0);
+
+  let activeBranchId = 'all';
+  let searchQuery = '';
+  let activeViewMode = 'tree'; // 'tree' or 'graph'
+  let selectedConcept = branches[0]?.subconcepts[0] || null;
+
+  function render() {
+    // Filter branches & subconcepts
+    const filteredBranches = branches.map((b, idx) => {
+      const color = branchColors[idx % branchColors.length];
+      const matchingSubs = (b.subconcepts || []).filter(s => {
+        if (activeBranchId !== 'all' && b.id !== activeBranchId) return false;
+        if (!searchQuery) return true;
+        const q = searchQuery.toLowerCase();
+        return (
+          (s.name && s.name.toLowerCase().includes(q)) ||
+          (s.desc && s.desc.toLowerCase().includes(q)) ||
+          (s.formula && s.formula.toLowerCase().includes(q)) ||
+          (s.tag && s.tag.toLowerCase().includes(q))
+        );
+      });
+      return { ...b, color, matchingSubs };
+    }).filter(b => activeBranchId === 'all' || b.id === activeBranchId);
+
+    container.innerHTML = `
+      <div class="mindmap-wrapper">
+        <!-- Top Central Hero Banner -->
+        <div class="mindmap-banner">
+          <div class="mindmap-banner-top">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span class="mindmap-badge">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                  <circle cx="12" cy="12" r="3"/>
+                  <path d="M12 3v6m0 6v6M3 12h6m6 0h6"/>
+                </svg>
+                Concept Architecture
+              </span>
+              <span style="font-size: 14px; font-weight: 700; color: #fff;">
+                ${course.title}
+              </span>
+            </div>
+            <div class="mindmap-stats">
+              <span class="mindmap-stat-item">
+                <span style="color: var(--brilliant-sky);">●</span>
+                <strong>${branches.length}</strong> Concept Branches
+              </span>
+              <span class="mindmap-stat-item">
+                <span style="color: #a855f7;">●</span>
+                <strong>${totalConcepts}</strong> Core Principles
+              </span>
+              <span class="mindmap-stat-item">
+                <span style="color: #f59e0b;">●</span>
+                <strong>${totalFormulas}</strong> Key Formulas
+              </span>
+            </div>
+          </div>
+
+          <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 2px;">
+            Central Invariant &amp; Governing Physical Law:
+          </div>
+          <div class="mindmap-core-text">
+            "${mindMap.core}"
+          </div>
+        </div>
+
+        <!-- Controls: Filters, Search, View Mode Toggle -->
+        <div class="mindmap-controls-bar">
+          <div class="mindmap-filter-group">
+            <span style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-right: 4px;">Branch:</span>
+            <button class="mindmap-filter-chip ${activeBranchId === 'all' ? 'active' : ''}" data-branch-filter="all">
+              All Branches (${branches.length})
+            </button>
+            ${branches.map(b => `
+              <button class="mindmap-filter-chip ${activeBranchId === b.id ? 'active' : ''}" data-branch-filter="${b.id}">
+                ${b.title}
+              </button>
+            `).join('')}
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+            <div class="mindmap-search-wrap">
+              <svg class="mindmap-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/>
+                <path d="M21 21l-4.35-4.35"/>
+              </svg>
+              <input type="text" class="mindmap-search-input" id="mm-search-input" placeholder="Search concepts or formulas..." value="${searchQuery}">
+            </div>
+
+            <div class="mindmap-view-toggle">
+              <button class="mindmap-view-btn ${activeViewMode === 'tree' ? 'active' : ''}" id="mm-view-tree-btn">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="7" height="7"/>
+                  <rect x="14" y="3" width="7" height="7"/>
+                  <rect x="14" y="14" width="7" height="7"/>
+                  <rect x="3" y="14" width="7" height="7"/>
+                </svg>
+                Tree View
+              </button>
+              <button class="mindmap-view-btn ${activeViewMode === 'graph' ? 'active' : ''}" id="mm-view-graph-btn">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="6" cy="6" r="3"/>
+                  <circle cx="18" cy="18" r="3"/>
+                  <path d="M8.5 8.5l7 7"/>
+                  <circle cx="18" cy="6" r="3"/>
+                  <path d="M15.5 8.5l-7 7"/>
+                </svg>
+                Interactive Graph
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Main Display: Tree or Graph -->
+        ${activeViewMode === 'tree' ? renderTreeViewHtml(filteredBranches, selectedConcept) : renderGraphViewHtml()}
+
+        <!-- Selected Concept Inspector Drawer -->
+        ${renderConceptInspectorHtml(selectedConcept, course)}
+      </div>
+    `;
+
+    attachEventHandlers();
+
+    if (activeViewMode === 'graph') {
+      setTimeout(() => initMindMapGraph(course, branches, selectConceptFromGraph), 50);
+    }
+  }
+
+  function renderTreeViewHtml(filteredBranches, selected) {
+    if (filteredBranches.length === 0 || filteredBranches.every(b => b.matchingSubs.length === 0)) {
+      return `
+        <div style="text-align: center; padding: 48px; background: #081624; border-radius: 14px; border: 1px dashed var(--border-subtle);">
+          <div style="font-size: 32px; margin-bottom: 8px;">🔍</div>
+          <div style="font-size: 15px; font-weight: 700; color: #fff;">No concepts found matching "${searchQuery}"</div>
+          <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">Try searching for a different keyword or formula.</p>
+        </div>
+      `;
+    }
+
+    return `
+      <div class="mindmap-tree-container">
+        ${filteredBranches.map(b => {
+          if (b.matchingSubs.length === 0) return '';
+          return `
+            <div class="mindmap-branch-block" style="border-left: 4px solid ${b.color};">
+              <div class="mindmap-branch-header">
+                <div class="mindmap-branch-left">
+                  <span class="mindmap-branch-indicator" style="background: ${b.color}; color: ${b.color};"></span>
+                  <span class="mindmap-branch-title">${b.title}</span>
+                  <span class="mindmap-branch-badge">${b.badge || 'Core'}</span>
+                </div>
+                <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">
+                  ${b.matchingSubs.length} concept${b.matchingSubs.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+
+              <div class="mindmap-subconcepts-grid">
+                ${b.matchingSubs.map(s => {
+                  const isSelected = selected && selected.name === s.name;
+                  return `
+                    <div class="mindmap-subconcept-card ${isSelected ? 'selected' : ''}" data-concept-name="${encodeURIComponent(s.name)}" style="${isSelected ? `border-color: ${b.color};` : ''}">
+                      <div>
+                        <div class="mindmap-subconcept-top">
+                          <span class="mindmap-subconcept-name">${s.name}</span>
+                          ${s.tag ? `<span class="mindmap-subconcept-tag" style="border-color: ${b.color}40; background: ${b.color}20; color: ${b.color};">${s.tag}</span>` : ''}
+                        </div>
+                        ${s.formula ? `
+                          <div class="mindmap-subconcept-formula">
+                            ${s.formula}
+                          </div>
+                        ` : ''}
+                        <div class="mindmap-subconcept-desc">${s.desc}</div>
+                      </div>
+                      <div style="margin-top: 10px; display: flex; align-items: center; justify-content: flex-end;">
+                        <span style="font-size: 11px; font-weight: 700; color: ${b.color}; display: flex; align-items: center; gap: 4px;">
+                          Inspect details →
+                        </span>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  }
+
+  function renderGraphViewHtml() {
+    return `
+      <div class="mindmap-graph-container">
+        <canvas id="mm-graph-canvas" class="mindmap-canvas"></canvas>
+        <div class="mindmap-graph-legend">
+          <div style="font-weight: 700; color: #fff; margin-bottom: 2px;">INTERACTIVE GRAPH</div>
+          <div>• Drag nodes or background to explore</div>
+          <div>• Click any node to inspect concept &amp; equation</div>
+        </div>
+        <div class="mindmap-graph-hint">
+          Click a node to inspect details below
+        </div>
+      </div>
+    `;
+  }
+
+  function renderConceptInspectorHtml(concept, course) {
+    if (!concept) return '';
+
+    return `
+      <div class="mindmap-inspector">
+        <div class="mindmap-inspector-head">
+          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; background: rgba(56, 189, 248, 0.2); color: var(--brilliant-sky); padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.3);">
+              ${concept.tag || 'Concept Analysis'}
+            </span>
+            <h3 class="mindmap-inspector-title">${concept.name}</h3>
+          </div>
+
+          <div class="mindmap-inspector-actions">
+            ${concept.formula ? `
+              <button class="mindmap-inspector-btn" id="mm-copy-formula-btn" data-formula="${encodeURIComponent(concept.formula)}">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+                </svg>
+                Copy Formula
+              </button>
+            ` : ''}
+            <button class="mindmap-inspector-btn primary" id="mm-jump-syllabus-btn">
+              📖 View in Syllabus
+            </button>
+            <button class="mindmap-inspector-btn" id="mm-jump-quiz-btn">
+              📝 Practice Quiz
+            </button>
+          </div>
+        </div>
+
+        ${concept.formula ? `
+          <div class="mindmap-formula-hero">
+            <div>
+              <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 2px;">Governing Mathematical Formula:</div>
+              <div class="mindmap-formula-tex">${concept.formula}</div>
+            </div>
+            <span style="font-size: 11px; color: var(--text-secondary); background: rgba(255,255,255,0.06); padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); font-family: monospace;">
+              SI Invariant
+            </span>
+          </div>
+        ` : ''}
+
+        <div class="mindmap-inspector-body">
+          <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px;">Conceptual Explanation &amp; Physics Significance:</div>
+          <div>${concept.desc}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  function selectConceptFromGraph(concept) {
+    selectedConcept = concept;
+    const inspectorContainer = container.querySelector('.mindmap-inspector');
+    if (inspectorContainer) {
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = renderConceptInspectorHtml(selectedConcept, course);
+      if (tempDiv.firstElementChild) {
+        inspectorContainer.replaceWith(tempDiv.firstElementChild);
+        attachInspectorHandlers();
+      }
+    }
+  }
+
+  function attachEventHandlers() {
+    // Search
+    const searchInput = container.querySelector('#mm-search-input');
+    if (searchInput) {
+      searchInput.addEventListener('input', (e) => {
+        searchQuery = e.target.value;
+        render();
+        const newSearch = container.querySelector('#mm-search-input');
+        if (newSearch) {
+          newSearch.focus();
+          newSearch.selectionStart = newSearch.selectionEnd = newSearch.value.length;
+        }
+      });
+    }
+
+    // Branch filter chips
+    container.querySelectorAll('[data-branch-filter]').forEach(chip => {
+      chip.addEventListener('click', () => {
+        activeBranchId = chip.getAttribute('data-branch-filter');
+        render();
+      });
+    });
+
+    // View toggle
+    container.querySelector('#mm-view-tree-btn')?.addEventListener('click', () => {
+      if (activeViewMode !== 'tree') {
+        activeViewMode = 'tree';
+        render();
+      }
+    });
+
+    container.querySelector('#mm-view-graph-btn')?.addEventListener('click', () => {
+      if (activeViewMode !== 'graph') {
+        activeViewMode = 'graph';
+        render();
+      }
+    });
+
+    // Subconcept card selection in tree view
+    container.querySelectorAll('.mindmap-subconcept-card').forEach(card => {
+      card.addEventListener('click', () => {
+        const cName = decodeURIComponent(card.getAttribute('data-concept-name') || '');
+        let found = null;
+        for (const b of branches) {
+          found = (b.subconcepts || []).find(s => s.name === cName);
+          if (found) break;
+        }
+        if (found) {
+          selectedConcept = found;
+          render();
+        }
+      });
+    });
+
+    attachInspectorHandlers();
+  }
+
+  function attachInspectorHandlers() {
+    // Copy formula
+    container.querySelector('#mm-copy-formula-btn')?.addEventListener('click', (e) => {
+      const btn = e.currentTarget;
+      const formula = decodeURIComponent(btn.getAttribute('data-formula') || '');
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(formula).then(() => {
+          btn.innerHTML = `✓ Copied!`;
+          setTimeout(() => {
+            btn.innerHTML = `
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+              </svg>
+              Copy Formula
+            `;
+          }, 2000);
+        });
+      }
+    });
+
+    // Jump to syllabus
+    container.querySelector('#mm-jump-syllabus-btn')?.addEventListener('click', () => {
+      const modal = document.getElementById('brilliant-modal-overlay');
+      const sylTab = modal?.querySelector('.tab-btn[data-tab="syllabus"]');
+      if (sylTab) sylTab.click();
+    });
+
+    // Jump to quiz
+    container.querySelector('#mm-jump-quiz-btn')?.addEventListener('click', () => {
+      const modal = document.getElementById('brilliant-modal-overlay');
+      const quizTab = modal?.querySelector('.tab-btn[data-tab="quiz"]');
+      if (quizTab) quizTab.click();
+    });
+  }
+
+  render();
+}
+
+function initMindMapGraph(course, branches, onSelectConcept) {
+  const canvas = document.getElementById('mm-graph-canvas');
+  if (!canvas) return;
+
+  const ctx = canvas.getContext('2d');
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  const W = rect.width || 700;
+  const H = rect.height || 520;
+
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  ctx.scale(dpr, dpr);
+
+  const branchColors = ['#38bdf8', '#818cf8', '#34d399', '#f59e0b', '#ec4899', '#06b6d4'];
+  const nodes = [];
+  const links = [];
+
+  const cleanTitle = course.title.replace(/^Chapter\s+\d+:\s*/i, '');
+  const rootNode = {
+    id: 'root',
+    type: 'root',
+    title: cleanTitle,
+    x: W / 2,
+    y: H / 2,
+    baseX: W / 2,
+    baseY: H / 2,
+    r: 34,
+    color: '#38bdf8'
+  };
+  nodes.push(rootNode);
+
+  const numBranches = branches.length;
+  branches.forEach((b, bIdx) => {
+    const angle = (2 * Math.PI * bIdx / numBranches) - Math.PI / 2;
+    const dist = Math.min(W, H) * 0.30;
+    const bColor = branchColors[bIdx % branchColors.length];
+    const bX = W / 2 + Math.cos(angle) * dist;
+    const bY = H / 2 + Math.sin(angle) * dist;
+
+    const bNode = {
+      id: b.id,
+      type: 'branch',
+      title: b.title,
+      badge: b.badge || '',
+      x: bX,
+      y: bY,
+      baseX: bX,
+      baseY: bY,
+      r: 22,
+      color: bColor,
+      branch: b
+    };
+    nodes.push(bNode);
+    links.push({ source: rootNode, target: bNode, color: bColor, width: 2.5 });
+
+    const subs = b.subconcepts || [];
+    const subCount = subs.length;
+    subs.forEach((s, sIdx) => {
+      const spread = 0.95;
+      const subAngle = angle + (sIdx - (subCount - 1) / 2) * (spread / Math.max(1, subCount - 1 || 1));
+      const subDist = 72;
+      const sX = bX + Math.cos(subAngle) * subDist;
+      const sY = bY + Math.sin(subAngle) * subDist;
+
+      const sNode = {
+        id: `${b.id}-s${sIdx}`,
+        type: 'subconcept',
+        concept: s,
+        title: s.name,
+        formula: s.formula || '',
+        tag: s.tag || '',
+        x: sX,
+        y: sY,
+        baseX: sX,
+        baseY: sY,
+        r: 13,
+        color: bColor
+      };
+      nodes.push(sNode);
+      links.push({ source: bNode, target: sNode, color: bColor, width: 1.5 });
+    });
+  });
+
+  let mouse = { x: -1000, y: -1000 };
+  let hoveredNode = null;
+  let draggedNode = null;
+  let isDragging = false;
+  let dragOffset = { x: 0, y: 0 };
+  let time = 0;
+
+  function onMouseMove(e) {
+    const cRect = canvas.getBoundingClientRect();
+    mouse.x = e.clientX - cRect.left;
+    mouse.y = e.clientY - cRect.top;
+
+    if (draggedNode) {
+      draggedNode.x = mouse.x - dragOffset.x;
+      draggedNode.y = mouse.y - dragOffset.y;
+      draggedNode.baseX = draggedNode.x;
+      draggedNode.baseY = draggedNode.y;
+      return;
+    }
+
+    let found = null;
+    for (let i = nodes.length - 1; i >= 0; i--) {
+      const n = nodes[i];
+      const dist = Math.hypot(n.x - mouse.x, n.y - mouse.y);
+      if (dist <= n.r + 6) {
+        found = n;
+        break;
+      }
+    }
+    hoveredNode = found;
+    canvas.style.cursor = found ? 'pointer' : 'default';
+  }
+
+  function onMouseDown(e) {
+    if (hoveredNode) {
+      draggedNode = hoveredNode;
+      isDragging = true;
+      dragOffset.x = mouse.x - hoveredNode.x;
+      dragOffset.y = mouse.y - hoveredNode.y;
+    }
+  }
+
+  function onMouseUp(e) {
+    if (hoveredNode) {
+      if (hoveredNode.type === 'subconcept' && hoveredNode.concept) {
+        onSelectConcept(hoveredNode.concept);
+      } else if (hoveredNode.type === 'branch' && hoveredNode.branch) {
+        const firstSub = (hoveredNode.branch.subconcepts || [])[0];
+        if (firstSub) onSelectConcept(firstSub);
+      }
+    }
+    draggedNode = null;
+    isDragging = false;
+  }
+
+  canvas.addEventListener('mousemove', onMouseMove);
+  canvas.addEventListener('mousedown', onMouseDown);
+  window.addEventListener('mouseup', onMouseUp);
+
+  function animate() {
+    time += 0.02;
+
+    // Background
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#06111d';
+    ctx.fillRect(0, 0, W, H);
+
+    // Subtle radial background gradient
+    const bgGrad = ctx.createRadialGradient(W / 2, H / 2, 10, W / 2, H / 2, Math.max(W, H) * 0.6);
+    bgGrad.addColorStop(0, 'rgba(15, 33, 56, 0.6)');
+    bgGrad.addColorStop(1, 'rgba(6, 17, 29, 0.95)');
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, W, H);
+
+    // Subtle breathing displacement
+    nodes.forEach((n, idx) => {
+      if (n !== draggedNode && n.type !== 'root') {
+        const wobble = Math.sin(time + idx * 0.8) * 2;
+        n.x = n.baseX + wobble;
+        n.y = n.baseY + Math.cos(time + idx * 0.8) * 2;
+      }
+    });
+
+    // Draw Links
+    links.forEach(link => {
+      const isHighlighted = hoveredNode && (hoveredNode === link.source || hoveredNode === link.target);
+      ctx.beginPath();
+      ctx.moveTo(link.source.x, link.source.y);
+      ctx.lineTo(link.target.x, link.target.y);
+
+      ctx.strokeStyle = isHighlighted ? '#ffffff' : (link.color + (link.source.type === 'root' ? '99' : '55'));
+      ctx.lineWidth = isHighlighted ? link.width + 1.5 : link.width;
+      if (isHighlighted) {
+        ctx.shadowColor = link.color;
+        ctx.shadowBlur = 10;
+      } else {
+        ctx.shadowBlur = 0;
+      }
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    });
+
+    // Draw Nodes
+    nodes.forEach(n => {
+      const isHovered = n === hoveredNode;
+
+      if (n.type === 'root') {
+        // Central Root Node
+        const pulse = Math.sin(time * 2) * 3;
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.r + pulse + (isHovered ? 4 : 0), 0, Math.PI * 2);
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.2)';
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
+        ctx.fillStyle = '#0e2439';
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 3;
+        ctx.shadowColor = '#38bdf8';
+        ctx.shadowBlur = 14;
+        ctx.fill();
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 12px Inter, system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        const words = n.title.split(' ');
+        if (words.length > 2) {
+          ctx.fillText(words.slice(0, 2).join(' '), n.x, n.y - 6);
+          ctx.fillText(words.slice(2).join(' '), n.x, n.y + 8);
+        } else {
+          ctx.fillText(n.title, n.x, n.y);
+        }
+      } else if (n.type === 'branch') {
+        // Branch Node
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.r + (isHovered ? 4 : 0), 0, Math.PI * 2);
+        ctx.fillStyle = '#0a1a2c';
+        ctx.strokeStyle = n.color;
+        ctx.lineWidth = isHovered ? 3 : 2;
+        if (isHovered) {
+          ctx.shadowColor = n.color;
+          ctx.shadowBlur = 12;
+        }
+        ctx.fill();
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Inner dot
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, 6, 0, Math.PI * 2);
+        ctx.fillStyle = n.color;
+        ctx.fill();
+
+        // Label below
+        ctx.fillStyle = '#e2e8f0';
+        ctx.font = 'bold 11px Inter, system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        ctx.fillText(n.title, n.x, n.y + n.r + 6);
+      } else if (n.type === 'subconcept') {
+        // Subconcept Node
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.r + (isHovered ? 3 : 0), 0, Math.PI * 2);
+        ctx.fillStyle = isHovered ? n.color : '#0f2238';
+        ctx.strokeStyle = n.color;
+        ctx.lineWidth = 1.5;
+        if (isHovered) {
+          ctx.shadowColor = n.color;
+          ctx.shadowBlur = 10;
+        }
+        ctx.fill();
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Label
+        ctx.fillStyle = isHovered ? '#ffffff' : '#94a3b8';
+        ctx.font = '10px Inter, system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'top';
+        const label = n.title.length > 18 ? n.title.substring(0, 16) + '…' : n.title;
+        ctx.fillText(label, n.x, n.y + n.r + 4);
+      }
+    });
+
+    // Tooltip if hovering a subconcept
+    if (hoveredNode && hoveredNode.type === 'subconcept') {
+      const tipText = hoveredNode.title;
+      const formulaText = hoveredNode.formula ? hoveredNode.formula : '';
+      
+      ctx.font = 'bold 11px Inter, system-ui, sans-serif';
+      const textWidth = Math.max(ctx.measureText(tipText).width, ctx.measureText(formulaText).width) + 24;
+      const tipH = formulaText ? 44 : 28;
+      const tipX = Math.min(W - textWidth - 10, Math.max(10, hoveredNode.x - textWidth / 2));
+      const tipY = Math.max(10, hoveredNode.y - hoveredNode.r - tipH - 8);
+
+      ctx.fillStyle = 'rgba(10, 24, 40, 0.95)';
+      ctx.strokeStyle = hoveredNode.color;
+      ctx.lineWidth = 1;
+      ctx.shadowColor = 'rgba(0,0,0,0.5)';
+      ctx.shadowBlur = 8;
+      roundRect(ctx, tipX, tipY, textWidth, tipH, 6, true, true);
+      ctx.shadowBlur = 0;
+
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText(tipText, tipX + 12, tipY + 7);
+
+      if (formulaText) {
+        ctx.fillStyle = '#facc15';
+        ctx.font = '10px monospace';
+        ctx.fillText(formulaText, tipX + 12, tipY + 24);
+      }
+    }
+
+    currentMindMapCanvasAnimation = requestAnimationFrame(animate);
+  }
+
+  currentMindMapCanvasAnimation = requestAnimationFrame(animate);
+}
+
+function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+  if (fill) ctx.fill();
+  if (stroke) ctx.stroke();
 }
 
 // -----------------------------------------------------------------------------
