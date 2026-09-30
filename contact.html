@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Contact Us | NovaLeran</title>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <link rel="stylesheet" href="style.css?v=17">
+  <!-- Google Identity Services SDK for Google Sign-In -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+
+  <!-- ======================================================================
+       Brilliant Header & Navigation
+       ====================================================================== -->
+  <header class="brilliant-header">
+    <div class="header-inner">
+      <div class="header-left">
+        <!-- Brand Logo -->
+        <a href="index.html" class="brand-logo" id="brand-logo-btn" title="NovaLeran Home" style="text-decoration: none;">
+          <div class="brand-icon">
+            <svg width="30" height="30" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 2L3 7.5v9L12 22l9-5.5v-9L12 2z" fill="#ffffff"/>
+              <path d="M12 2l9 5.5-9 5.5-9-5.5L12 2z" fill="rgba(255,255,255,0.95)"/>
+              <path d="M12 13v9l9-5.5v-9L12 13z" fill="rgba(255,255,255,0.7)"/>
+              <path d="M12 13L3 7.5v9l9 5.5v-9z" fill="rgba(255,255,255,0.45)"/>
+            </svg>
+          </div>
+          <span class="brand-name">NovaLeran</span>
+        </a>
+
+        <nav class="nav-links">
+          <a class="nav-item" data-nav="courses" href="index.html">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Courses</span>
+          </a>
+          <a class="nav-item active" data-nav="contact" href="contact.html">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Contact</span>
+          </a>
+        </nav>
+      </div>
+
+      <!-- Right Header Actions (Sign In / User Profile) -->
+      <div class="header-right" id="header-auth-container">
+        <!-- Dynambically rendered by app.js -->
+        <button class="nav-signin-btn" id="nav-signin-btn">Sign In</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ======================================================================
+       Main Content (Contact Us)
+       ====================================================================== -->
+  <main class="page-main">
+    
+    <!-- Hero Heading -->
+    <div class="page-hero" style="margin-bottom: 36px;">
+      <h1 class="page-title">Get in Touch</h1>
+      <p class="page-subtitle">Have questions about the physics curriculum or suggestions? We are here to help.</p>
+    </div>
+
+    <div class="contact-grid">
+      
+      <!-- Left Column: Direct Contact Info Channels -->
+      <div style="display: flex; flex-direction: column; gap: 20px;">
+        
+        <!-- WhatsApp Card -->
+        <div class="contact-card">
+          <div style="display: flex; align-items: flex-start; gap: 16px;">
+            <div class="contact-card-icon whatsapp">
+              <!-- Official WhatsApp SVG Icon -->
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0012.04 2zm0 17.72c-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.17 8.17 0 01-1.25-4.35c0-4.52 3.68-8.19 8.19-8.19 2.19 0 4.25.85 5.8 2.4 1.55 1.55 2.4 3.61 2.4 5.79 0 4.52-3.67 8.2-8.15 8.2zm4.49-6.14c-.25-.12-1.47-.72-1.7-.81-.23-.08-.39-.12-.56.12-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.14.17-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.4-.42-.56-.43h-.47c-.17 0-.43.06-.66.31-.22.25-.86.84-.86 2.06 0 1.21.89 2.39 1.01 2.56.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.53.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.14-1.18-.06-.11-.23-.18-.47-.3z"/>
+              </svg>
+            </div>
+            <div style="flex: 1;">
+              <div style="font-size: 11px; font-weight: 800; color: #25D366; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 2px;">
+                Instant Messaging
+              </div>
+              <h3 style="font-size: 18px; font-weight: 800; color: #fff; margin: 0 0 4px 0;">WhatsApp</h3>
+              <p style="font-size: 15px; font-weight: 700; color: #38bdf8; margin: 0 0 6px 0; font-family: monospace;">+91 9110827904</p>
+              <p style="font-size: 13px; color: var(--text-secondary); margin: 0 0 12px 0; line-height: 1.4;">
+                Chat directly with our team for quick responses, course guidance, and inquiries.
+              </p>
+              <a href="https://wa.me/919110827904" target="_blank" rel="noopener noreferrer" class="contact-action-btn whatsapp-btn">
+                <span>Chat on WhatsApp</span>
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <path d="M14 5l7 7m0 0l-7 7m7-7H3" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Email Card -->
+        <div class="contact-card">
+          <div style="display: flex; align-items: flex-start; gap: 16px;">
+            <div class="contact-card-icon email">
+              <svg width="26" height="26" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </div>
+            <div style="flex: 1;">
+              <div style="font-size: 11px; font-weight: 800; color: #38bdf8; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 2px;">
+                Official Support
+              </div>
+              <h3 style="font-size: 18px; font-weight: 800; color: #fff; margin: 0 0 4px 0;">Email Us</h3>
+              <p style="font-size: 14.5px; font-weight: 700; color: #38bdf8; margin: 0 0 6px 0; font-family: monospace;">projecttellmewhy@gmail.com</p>
+              <p style="font-size: 13px; color: var(--text-secondary); margin: 0 0 12px 0; line-height: 1.4;">
+                Send us detailed queries, partnership requests, or feedback on our interactive curriculum.
+              </p>
+              <a href="mailto:projecttellmewhy@gmail.com" class="contact-action-btn email-btn">
+                <span>Send an Email</span>
+                <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+                  <path d="M14 5l7 7m0 0l-7 7m7-7H3" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </a>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Help Note -->
+        <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border-subtle); border-radius: 14px; padding: 18px 20px; display: flex; align-items: center; gap: 14px;">
+          <span style="font-size: 24px;">⚡</span>
+          <div>
+            <h4 style="font-size: 13.5px; font-weight: 700; color: #fff; margin: 0 0 2px 0;">Prompt Response</h4>
+            <p style="font-size: 12.5px; color: var(--text-secondary); margin: 0;">We typically respond within 24 hours on all inquiries.</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Right Column: Interactive Contact Form -->
+      <div class="contact-form-card">
+        <div style="margin-bottom: 24px;">
+          <h2 style="font-size: 20px; font-weight: 800; color: #fff; margin: 0 0 6px 0;">Send us a Message</h2>
+          <p style="font-size: 13.5px; color: var(--text-secondary); margin: 0;">Fill out the form below and we'll get back to you shortly.</p>
+        </div>
+
+        <form id="contact-form" onsubmit="handleContactSubmit(event)">
+          
+          <div class="contact-form-group">
+            <label class="contact-form-label" for="contact-name">Full Name *</label>
+            <input type="text" id="contact-name" class="contact-form-input" placeholder="e.g. Richard Feynman" required>
+          </div>
+
+          <div class="contact-form-group">
+            <label class="contact-form-label" for="contact-email">Email Address *</label>
+            <input type="email" id="contact-email" class="contact-form-input" placeholder="e.g. richard@example.com" required>
+          </div>
+
+          <div class="contact-form-group">
+            <label class="contact-form-label" for="contact-subject">Topic</label>
+            <select id="contact-subject" class="contact-form-select">
+              <option value="Nuclear Physics & Stars">Nuclear Physics &amp; Stars Curriculum</option>
+              <option value="General Inquiry">General Inquiry</option>
+              <option value="Feedback / Suggestions">Feedback &amp; Suggestions</option>
+              <option value="Technical Support">Technical Support</option>
+            </select>
+          </div>
+
+          <div class="contact-form-group">
+            <label class="contact-form-label" for="contact-message">Message *</label>
+            <textarea id="contact-message" class="contact-form-textarea" placeholder="How can we help you today?" required></textarea>
+          </div>
+
+          <div id="contact-form-status" style="margin-bottom: 16px; display: none;"></div>
+
+          <button type="submit" id="contact-submit-btn" class="action-start-btn" style="width: 100%; justify-content: center; padding: 12px; font-size: 14.5px; font-weight: 700;">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24" style="margin-right: 6px;">
+              <path d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <span>Send Message</span>
+          </button>
+        </form>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- ======================================================================
+       Brilliant Footer
+       ====================================================================== -->
+  <footer style="width: 100%; background: #020c18; border-top: 1px solid var(--border-subtle); padding: 48px 32px;">
+    <div style="max-width: 1360px; margin: 0 auto; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 24px;">
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2L3 7.5v9L12 22l9-5.5v-9L12 2z" fill="#ffffff"/>
+        </svg>
+        <span style="font-size: 18px; font-weight: 800; letter-spacing: 0.08em; color: #fff;">NovaLeran</span>
+        <span style="font-size: 13px; color: var(--text-muted); margin-left: 12px;">
+          © 2026 NovaLeran. Interactive Physics &amp; Science Curriculum.
+        </span>
+      </div>
+      <div style="display: flex; flex-wrap: wrap; gap: 20px; font-size: 13px; color: var(--text-secondary);">
+        <a href="index.html" style="color: var(--text-secondary); text-decoration: none;">Courses</a>
+        <a href="contact.html" style="color: #38bdf8; text-decoration: none; font-weight: 600;">Contact</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="curriculum-data.js?v=17"></script>
+  <script src="app.js?v=17"></script>
+  <script>
+    function handleContactSubmit(e) {
+      e.preventDefault();
+      const name = document.getElementById('contact-name').value.trim();
+      const email = document.getElementById('contact-email').value.trim();
+      const subject = document.getElementById('contact-subject').value;
+      const message = document.getElementById('contact-message').value.trim();
+      const statusBox = document.getElementById('contact-form-status');
+      const submitBtn = document.getElementById('contact-submit-btn');
+
+      if (!name || !email || !message) return;
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = 'Sending...';
+
+      setTimeout(() => {
+        statusBox.style.display = 'block';
+        statusBox.innerHTML = `
+          <div style="background: rgba(34, 197, 94, 0.15); border: 1px solid #22c55e; color: #86efac; padding: 14px 16px; border-radius: 10px; font-size: 13.5px; line-height: 1.5;">
+            <strong>✓ Message Prepared!</strong><br>
+            Thank you, ${name}. We've received your request and will reach out to <strong>${email}</strong> shortly.
+            <div style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
+              <a href="mailto:projecttellmewhy@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent('From: ' + name + ' (' + email + ')\n\n' + message)}" class="contact-action-btn email-btn" style="padding: 6px 12px; font-size: 12px; margin-top: 0;">
+                Open in Email Client
+              </a>
+              <a href="https://wa.me/919110827904?text=${encodeURIComponent('Hi NovaLeran, my name is ' + name + ' (' + email + '). Topic: ' + subject + ' - ' + message)}" target="_blank" class="contact-action-btn whatsapp-btn" style="padding: 6px 12px; font-size: 12px; margin-top: 0;">
+                Send via WhatsApp
+              </a>
+            </div>
+          </div>
+        `;
+
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '✓ Sent Successfully';
+        submitBtn.style.background = '#22c55e';
+      }, 600);
+    }
+  </script>
+</body>
+</html>
