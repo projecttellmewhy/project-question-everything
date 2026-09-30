@@ -22,14 +22,38 @@ function loadState() {
     if (saved) {
       appState = { ...appState, ...JSON.parse(saved) };
     }
+    if (appState.currentUser && appState.currentUser.email) {
+      loadUserProgress(appState.currentUser.email);
+    }
   } catch (e) {
     console.error('Failed to load state', e);
+  }
+}
+
+function loadUserProgress(email) {
+  try {
+    const userSaved = localStorage.getItem('novalearn_user_progress_' + email);
+    if (userSaved) {
+      const data = JSON.parse(userSaved);
+      appState.completedCourses = data.completedCourses || {};
+      appState.quizScores = data.quizScores || {};
+      appState.notes = data.notes || {};
+    }
+  } catch (e) {
+    console.error('Failed to load user progress', e);
   }
 }
 
 function saveState() {
   try {
     localStorage.setItem(STATE_KEY, JSON.stringify(appState));
+    if (appState.currentUser && appState.currentUser.email) {
+      localStorage.setItem('novalearn_user_progress_' + appState.currentUser.email, JSON.stringify({
+        completedCourses: appState.completedCourses,
+        quizScores: appState.quizScores,
+        notes: appState.notes
+      }));
+    }
   } catch (e) {
     console.error('Failed to save state', e);
   }
@@ -139,15 +163,32 @@ function renderLearningPaths() {
     return;
   }
 
-  container.innerHTML = filteredPaths.map(path => `
+  container.innerHTML = filteredPaths.map(path => {
+    const pathCourses = path.courses || [];
+    const doneCount = pathCourses.filter(c => appState.completedCourses[c.id]).length;
+    const pathPct = pathCourses.length ? Math.round((doneCount / pathCourses.length) * 100) : 0;
+
+    return `
     <div class="path-section" id="${path.id}">
       <div class="path-section-header">
         <div class="path-section-icon" style="background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-subtle);">
           ${renderPathHeaderIcon(path.icon, path.color)}
         </div>
-        <div class="path-section-text">
-          <h3 class="path-section-title">${path.title}</h3>
-          <p class="path-section-desc">${path.subtitle}</p>
+        <div class="path-section-text" style="flex: 1;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px;">
+            <div>
+              <h3 class="path-section-title">${path.title}</h3>
+              <p class="path-section-desc">${path.subtitle}</p>
+            </div>
+            <div style="min-width: 180px; text-align: right;">
+              <div style="font-size: 12px; font-weight: 700; color: #38bdf8; margin-bottom: 4px;">
+                ${doneCount}/${pathCourses.length} Chapters (${pathPct}%)
+              </div>
+              <div class="path-progress-track" style="height: 6px;">
+                <div class="path-progress-fill" style="width: ${pathPct}%;"></div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -168,7 +209,8 @@ function renderLearningPaths() {
         }).join('')}
       </div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 
   // Attach click to open course reader modal
   container.querySelectorAll('.course-tile').forEach(tile => {
@@ -1117,11 +1159,26 @@ function renderNavbarAuth() {
   } else {
     const user = appState.currentUser;
     const initials = getInitials(user.name);
+    const completed = Object.values(appState.completedCourses).filter(Boolean).length;
+    const total = (curriculum.chapters || []).length || 25;
+    const percent = Math.round((completed / total) * 100);
+
     container.innerHTML = `
+      <!-- Header Progress Bar Widget -->
+      <div class="header-progress-widget" onclick="openProfileModal()" title="View Curriculum Progress (${completed}/${total} chapters)">
+        <div class="header-progress-info">
+          <span class="header-progress-label">Progress</span>
+          <span class="header-progress-val">${completed}/${total} (${percent}%)</span>
+        </div>
+        <div class="header-progress-track">
+          <div class="header-progress-fill" style="width: ${percent}%;"></div>
+        </div>
+      </div>
+
       <div class="user-menu-wrapper">
         <button class="user-menu-btn" id="user-menu-btn" onclick="toggleAuthDropdown(event)">
-          <div class="avatar-btn" style="width: 30px; height: 30px; font-size: 12px; border: none;">
-            ${initials}
+          <div class="avatar-btn" style="width: 30px; height: 30px; font-size: 12px; border: none; flex-shrink: 0;">
+            ${user.picture ? `<img src="${escapeHtml(user.picture)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">` : initials}
           </div>
           <span class="user-menu-name">${escapeHtml(user.name)}</span>
           <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
@@ -1132,7 +1189,7 @@ function renderNavbarAuth() {
         <div class="auth-dropdown" id="auth-dropdown">
           <div class="dropdown-user-info">
             <div class="avatar-btn" style="width: 44px; height: 44px; font-size: 16px; border: none; flex-shrink: 0;">
-              ${initials}
+              ${user.picture ? `<img src="${escapeHtml(user.picture)}" style="width:100%;height:100%;border-radius:50%;object-fit:cover;">` : initials}
             </div>
             <div style="overflow: hidden;">
               <div style="font-weight: 800; color: #fff; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
@@ -1141,6 +1198,17 @@ function renderNavbarAuth() {
               <div style="font-size: 12px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                 ${escapeHtml(user.email)}
               </div>
+            </div>
+          </div>
+
+          <!-- Progress summary inside dropdown -->
+          <div style="padding: 10px 12px; background: rgba(255,255,255,0.03); border-radius: 8px; margin-bottom: 10px;">
+            <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; color: #fff; margin-bottom: 4px;">
+              <span>Curriculum Progress</span>
+              <span style="color: #38bdf8;">${percent}%</span>
+            </div>
+            <div class="header-progress-track">
+              <div class="header-progress-fill" style="width: ${percent}%;"></div>
             </div>
           </div>
 
@@ -1327,11 +1395,29 @@ function openProfileModal() {
   const total = (curriculum.chapters || []).length || 25;
   const percent = Math.round((completed / total) * 100);
 
+  const paths = curriculum.learningPaths || [];
+  const pathBreakdownHtml = paths.map(p => {
+    const courses = p.courses || [];
+    const done = courses.filter(c => appState.completedCourses[c.id]).length;
+    const pct = courses.length ? Math.round((done / courses.length) * 100) : 0;
+    return `
+      <div style="margin-bottom: 12px;">
+        <div style="display: flex; justify-content: space-between; font-size: 12px; font-weight: 700; color: #fff; margin-bottom: 4px;">
+          <span>${escapeHtml(p.title)}</span>
+          <span style="color: #38bdf8;">${done}/${courses.length} (${pct}%)</span>
+        </div>
+        <div style="height: 6px; background: rgba(255, 255, 255, 0.08); border-radius: 999px; overflow: hidden;">
+          <div style="width: ${pct}%; height: 100%; background: linear-gradient(90deg, #4f5df5, #38bdf8); border-radius: 999px;"></div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
   createGenericModal(`
     <div style="padding: 24px;">
       <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px;">
-        <div style="width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #4f5df5, #f59e0b); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; color: #fff;">
-          ${initials}
+        <div style="width: 56px; height: 56px; border-radius: 50%; background: linear-gradient(135deg, #4f5df5, #f59e0b); display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: 800; color: #fff; flex-shrink: 0; overflow: hidden;">
+          ${user.picture ? `<img src="${escapeHtml(user.picture)}" style="width:100%;height:100%;object-fit:cover;">` : initials}
         </div>
         <div>
           <h3 style="font-size: 20px; font-weight: 800; color: #fff; margin: 0;">${escapeHtml(user.name)}</h3>
@@ -1351,16 +1437,20 @@ function openProfileModal() {
       </div>
 
       <div style="background: #081624; border: 1px solid var(--border-subtle); border-radius: 10px; padding: 16px; margin-bottom: 20px;">
-        <div style="display: flex; justify-content: space-between; font-size: 13px; font-weight: 600; color: #fff; margin-bottom: 8px;">
-          <span>Core Physics Curriculum</span>
-          <span>5 Learning Paths • 25 Chapters</span>
+        <div style="font-size: 13px; font-weight: 800; color: #fff; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em;">
+          Overall Physics Curriculum
         </div>
-        <div style="height: 6px; background: rgba(255, 255, 255, 0.1); border-radius: 3px; overflow: hidden;">
-          <div style="width: ${percent}%; height: 100%; background: linear-gradient(90deg, #4f5df5, #22c55e); border-radius: 3px; transition: width 0.3s ease;"></div>
+        <div style="height: 8px; background: rgba(255, 255, 255, 0.1); border-radius: 4px; overflow: hidden; margin-bottom: 20px;">
+          <div style="width: ${percent}%; height: 100%; background: linear-gradient(90deg, #4f5df5, #22c55e); border-radius: 4px; transition: width 0.3s ease;"></div>
         </div>
+
+        <div style="font-size: 13px; font-weight: 800; color: #fff; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.05em;">
+          Learning Paths Progress Breakdown
+        </div>
+        ${pathBreakdownHtml}
       </div>
     </div>
-  `, 500);
+  `, 520);
 }
 
 function openTodayModal() {
