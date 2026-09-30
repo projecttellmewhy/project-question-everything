@@ -791,690 +791,579 @@ function renderMindMapTab(course, container) {
     currentMindMapCanvasAnimation = null;
   }
 
-  const mindMap = course.mindMap || {
-    core: course.summary,
-    color: '#38bdf8',
-    branches: []
-  };
-
+  const mindMap = course.mindMap || { core: course.summary, color: '#38bdf8', branches: [] };
   const branches = mindMap.branches || [];
   const branchColors = ['#38bdf8', '#818cf8', '#34d399', '#f59e0b', '#ec4899', '#06b6d4'];
-  
-  const totalConcepts = branches.reduce((sum, b) => sum + (b.subconcepts ? b.subconcepts.length : 0), 0);
-  const totalFormulas = branches.reduce((sum, b) => sum + (b.subconcepts ? b.subconcepts.filter(s => s.formula).length : 0), 0);
+  const totalConcepts = branches.reduce((s, b) => s + (b.subconcepts || []).length, 0);
 
-  let activeBranchId = 'all';
-  let searchQuery = '';
-  let activeViewMode = 'tree'; // 'tree' or 'graph'
-  let selectedConcept = branches[0]?.subconcepts[0] || null;
+  // Render full-panel mind map + side inspector
+  container.innerHTML = `
+    <div id="mm-root" style="display:flex;height:600px;gap:0;overflow:hidden;border-radius:12px;border:1px solid var(--border-subtle);background:#06111d;">
+      <!-- Canvas Area -->
+      <div style="flex:1;position:relative;min-width:0;">
+        <canvas id="mm-graph-canvas" style="width:100%;height:100%;display:block;"></canvas>
 
-  function render() {
-    // Filter branches & subconcepts
-    const filteredBranches = branches.map((b, idx) => {
-      const color = branchColors[idx % branchColors.length];
-      const matchingSubs = (b.subconcepts || []).filter(s => {
-        if (activeBranchId !== 'all' && b.id !== activeBranchId) return false;
-        if (!searchQuery) return true;
-        const q = searchQuery.toLowerCase();
-        return (
-          (s.name && s.name.toLowerCase().includes(q)) ||
-          (s.desc && s.desc.toLowerCase().includes(q)) ||
-          (s.formula && s.formula.toLowerCase().includes(q)) ||
-          (s.tag && s.tag.toLowerCase().includes(q))
-        );
-      });
-      return { ...b, color, matchingSubs };
-    }).filter(b => activeBranchId === 'all' || b.id === activeBranchId);
-
-    container.innerHTML = `
-      <div class="mindmap-wrapper">
-        <!-- Top Central Hero Banner -->
-        <div class="mindmap-banner">
-          <div class="mindmap-banner-top">
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <span class="mindmap-badge">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                  <circle cx="12" cy="12" r="3"/>
-                  <path d="M12 3v6m0 6v6M3 12h6m6 0h6"/>
-                </svg>
-                Concept Architecture
-              </span>
-              <span style="font-size: 14px; font-weight: 700; color: #fff;">
-                ${course.title}
-              </span>
-            </div>
-            <div class="mindmap-stats">
-              <span class="mindmap-stat-item">
-                <span style="color: var(--brilliant-sky);">●</span>
-                <strong>${branches.length}</strong> Concept Branches
-              </span>
-              <span class="mindmap-stat-item">
-                <span style="color: #a855f7;">●</span>
-                <strong>${totalConcepts}</strong> Core Principles
-              </span>
-              <span class="mindmap-stat-item">
-                <span style="color: #f59e0b;">●</span>
-                <strong>${totalFormulas}</strong> Key Formulas
-              </span>
-            </div>
+        <!-- Top overlay bar -->
+        <div style="position:absolute;top:0;left:0;right:0;padding:14px 18px;display:flex;align-items:center;justify-content:space-between;background:linear-gradient(to bottom,rgba(6,17,29,0.95),transparent);pointer-events:none;">
+          <div style="display:flex;align-items:center;gap:10px;">
+            <span style="background:rgba(56,189,248,0.18);border:1px solid rgba(56,189,248,0.35);color:#38bdf8;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:0.08em;padding:3px 9px;border-radius:20px;">🧠 Concept Mind Map</span>
+            <span style="color:#ffffff;font-size:13px;font-weight:700;">${course.title.replace(/^Chapter\s+\d+:\s*/i,'')}</span>
           </div>
-
-          <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); margin-bottom: 2px;">
-            Central Invariant &amp; Governing Physical Law:
-          </div>
-          <div class="mindmap-core-text">
-            "${mindMap.core}"
+          <div style="display:flex;align-items:center;gap:12px;font-size:11px;color:#94a3b8;">
+            <span><strong style="color:#38bdf8;">${branches.length}</strong> branches</span>
+            <span>•</span>
+            <span><strong style="color:#818cf8;">${totalConcepts}</strong> concepts</span>
           </div>
         </div>
 
-        <!-- Controls: Filters, Search, View Mode Toggle -->
-        <div class="mindmap-controls-bar">
-          <div class="mindmap-filter-group">
-            <span style="font-size: 12px; font-weight: 700; color: var(--text-secondary); margin-right: 4px;">Branch:</span>
-            <button class="mindmap-filter-chip ${activeBranchId === 'all' ? 'active' : ''}" data-branch-filter="all">
-              All Branches (${branches.length})
-            </button>
-            ${branches.map(b => `
-              <button class="mindmap-filter-chip ${activeBranchId === b.id ? 'active' : ''}" data-branch-filter="${b.id}">
-                ${b.title}
-              </button>
-            `).join('')}
-          </div>
-
-          <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-            <div class="mindmap-search-wrap">
-              <svg class="mindmap-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="11" cy="11" r="8"/>
-                <path d="M21 21l-4.35-4.35"/>
-              </svg>
-              <input type="text" class="mindmap-search-input" id="mm-search-input" placeholder="Search concepts or formulas..." value="${searchQuery}">
-            </div>
-
-            <div class="mindmap-view-toggle">
-              <button class="mindmap-view-btn ${activeViewMode === 'tree' ? 'active' : ''}" id="mm-view-tree-btn">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="3" y="3" width="7" height="7"/>
-                  <rect x="14" y="3" width="7" height="7"/>
-                  <rect x="14" y="14" width="7" height="7"/>
-                  <rect x="3" y="14" width="7" height="7"/>
-                </svg>
-                Tree View
-              </button>
-              <button class="mindmap-view-btn ${activeViewMode === 'graph' ? 'active' : ''}" id="mm-view-graph-btn">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="6" cy="6" r="3"/>
-                  <circle cx="18" cy="18" r="3"/>
-                  <path d="M8.5 8.5l7 7"/>
-                  <circle cx="18" cy="6" r="3"/>
-                  <path d="M15.5 8.5l-7 7"/>
-                </svg>
-                Interactive Graph
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <!-- Main Display: Tree or Graph -->
-        ${activeViewMode === 'tree' ? renderTreeViewHtml(filteredBranches, selectedConcept) : renderGraphViewHtml()}
-
-        <!-- Selected Concept Inspector Drawer -->
-        ${renderConceptInspectorHtml(selectedConcept, course)}
-      </div>
-    `;
-
-    attachEventHandlers();
-
-    if (activeViewMode === 'graph') {
-      setTimeout(() => initMindMapGraph(course, branches, selectConceptFromGraph), 50);
-    }
-  }
-
-  function renderTreeViewHtml(filteredBranches, selected) {
-    if (filteredBranches.length === 0 || filteredBranches.every(b => b.matchingSubs.length === 0)) {
-      return `
-        <div style="text-align: center; padding: 48px; background: #081624; border-radius: 14px; border: 1px dashed var(--border-subtle);">
-          <div style="font-size: 32px; margin-bottom: 8px;">🔍</div>
-          <div style="font-size: 15px; font-weight: 700; color: #fff;">No concepts found matching "${searchQuery}"</div>
-          <p style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">Try searching for a different keyword or formula.</p>
-        </div>
-      `;
-    }
-
-    return `
-      <div class="mindmap-tree-container">
-        ${filteredBranches.map(b => {
-          if (b.matchingSubs.length === 0) return '';
-          return `
-            <div class="mindmap-branch-block" style="border-left: 4px solid ${b.color};">
-              <div class="mindmap-branch-header">
-                <div class="mindmap-branch-left">
-                  <span class="mindmap-branch-indicator" style="background: ${b.color}; color: ${b.color};"></span>
-                  <span class="mindmap-branch-title">${b.title}</span>
-                  <span class="mindmap-branch-badge">${b.badge || 'Core'}</span>
-                </div>
-                <span style="font-size: 12px; color: var(--text-muted); font-weight: 600;">
-                  ${b.matchingSubs.length} concept${b.matchingSubs.length !== 1 ? 's' : ''}
-                </span>
-              </div>
-
-              <div class="mindmap-subconcepts-grid">
-                ${b.matchingSubs.map(s => {
-                  const isSelected = selected && selected.name === s.name;
-                  return `
-                    <div class="mindmap-subconcept-card ${isSelected ? 'selected' : ''}" data-concept-name="${encodeURIComponent(s.name)}" style="${isSelected ? `border-color: ${b.color};` : ''}">
-                      <div>
-                        <div class="mindmap-subconcept-top">
-                          <span class="mindmap-subconcept-name">${s.name}</span>
-                          ${s.tag ? `<span class="mindmap-subconcept-tag" style="border-color: ${b.color}40; background: ${b.color}20; color: ${b.color};">${s.tag}</span>` : ''}
-                        </div>
-                        ${s.formula ? `
-                          <div class="mindmap-subconcept-formula">
-                            ${s.formula}
-                          </div>
-                        ` : ''}
-                        <div class="mindmap-subconcept-desc">${s.desc}</div>
-                      </div>
-                      <div style="margin-top: 10px; display: flex; align-items: center; justify-content: flex-end;">
-                        <span style="font-size: 11px; font-weight: 700; color: ${b.color}; display: flex; align-items: center; gap: 4px;">
-                          Inspect details →
-                        </span>
-                      </div>
-                    </div>
-                  `;
-                }).join('')}
-              </div>
-            </div>
-          `;
-        }).join('')}
-      </div>
-    `;
-  }
-
-  function renderGraphViewHtml() {
-    return `
-      <div class="mindmap-graph-container">
-        <canvas id="mm-graph-canvas" class="mindmap-canvas"></canvas>
-        <div class="mindmap-graph-legend">
-          <div style="font-weight: 700; color: #fff; margin-bottom: 2px;">INTERACTIVE GRAPH</div>
-          <div>• Drag nodes or background to explore</div>
-          <div>• Click any node to inspect concept &amp; equation</div>
-        </div>
-        <div class="mindmap-graph-hint">
-          Click a node to inspect details below
+        <!-- Bottom hint -->
+        <div style="position:absolute;bottom:14px;left:50%;transform:translateX(-50%);background:rgba(6,17,29,0.88);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:5px 14px;font-size:11px;color:#64748b;pointer-events:none;white-space:nowrap;">
+          Click any node to explore · Drag to rearrange
         </div>
       </div>
-    `;
-  }
 
-  function renderConceptInspectorHtml(concept, course) {
-    if (!concept) return '';
-
-    return `
-      <div class="mindmap-inspector">
-        <div class="mindmap-inspector-head">
-          <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-            <span style="font-size: 11px; font-weight: 800; text-transform: uppercase; background: rgba(56, 189, 248, 0.2); color: var(--brilliant-sky); padding: 3px 8px; border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.3);">
-              ${concept.tag || 'Concept Analysis'}
-            </span>
-            <h3 class="mindmap-inspector-title">${concept.name}</h3>
-          </div>
-
-          <div class="mindmap-inspector-actions">
-            ${concept.formula ? `
-              <button class="mindmap-inspector-btn" id="mm-copy-formula-btn" data-formula="${encodeURIComponent(concept.formula)}">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-                  <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-                </svg>
-                Copy Formula
-              </button>
-            ` : ''}
-            <button class="mindmap-inspector-btn primary" id="mm-jump-syllabus-btn">
-              📖 View in Syllabus
-            </button>
-            <button class="mindmap-inspector-btn" id="mm-jump-quiz-btn">
-              📝 Practice Quiz
-            </button>
+      <!-- Side Inspector Panel -->
+      <div id="mm-inspector-panel" style="width:280px;flex-shrink:0;background:#081624;border-left:1px solid var(--border-subtle);display:flex;flex-direction:column;overflow:hidden;">
+        <!-- Core principle header -->
+        <div style="padding:16px;border-bottom:1px solid var(--border-subtle);">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#38bdf8;margin-bottom:6px;">Central Principle</div>
+          <div style="font-size:12px;color:#cbd5e1;line-height:1.5;font-style:italic;">"${mindMap.core}"</div>
+        </div>
+        <!-- Branch legend -->
+        <div style="padding:12px 16px;border-bottom:1px solid var(--border-subtle);">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#64748b;margin-bottom:8px;">Branches</div>
+          ${branches.map((b, i) => `
+            <div class="mm-branch-legend-item" data-branch-id="${b.id}" style="display:flex;align-items:center;gap:8px;padding:5px 8px;border-radius:6px;cursor:pointer;margin-bottom:2px;transition:background 0.15s;">
+              <span style="width:8px;height:8px;border-radius:50%;background:${branchColors[i%branchColors.length]};flex-shrink:0;box-shadow:0 0 6px ${branchColors[i%branchColors.length]};"></span>
+              <span style="font-size:12px;font-weight:600;color:#e2e8f0;">${b.title}</span>
+              <span style="margin-left:auto;font-size:10px;color:#64748b;">${(b.subconcepts||[]).length}</span>
+            </div>
+          `).join('')}
+        </div>
+        <!-- Concept detail area -->
+        <div id="mm-concept-detail" style="flex:1;overflow-y:auto;padding:16px;">
+          <div style="text-align:center;padding:32px 0;">
+            <div style="font-size:28px;margin-bottom:8px;">👆</div>
+            <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:4px;">Select a Concept</div>
+            <div style="font-size:12px;color:#64748b;line-height:1.5;">Click any node in the mind map to explore its definition, formula, and connections.</div>
           </div>
         </div>
-
-        ${concept.formula ? `
-          <div class="mindmap-formula-hero">
-            <div>
-              <div style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 2px;">Governing Mathematical Formula:</div>
-              <div class="mindmap-formula-tex">${concept.formula}</div>
-            </div>
-            <span style="font-size: 11px; color: var(--text-secondary); background: rgba(255,255,255,0.06); padding: 4px 8px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.08); font-family: monospace;">
-              SI Invariant
-            </span>
-          </div>
-        ` : ''}
-
-        <div class="mindmap-inspector-body">
-          <div style="font-size: 11px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px;">Conceptual Explanation &amp; Physics Significance:</div>
-          <div>${concept.desc}</div>
+        <!-- Action buttons -->
+        <div style="padding:12px;border-top:1px solid var(--border-subtle);display:flex;flex-direction:column;gap:6px;">
+          <button id="mm-go-syllabus" style="width:100%;padding:8px;background:var(--brilliant-blue);border:none;border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+            📖 View Syllabus & Lessons
+          </button>
+          <button id="mm-go-quiz" style="width:100%;padding:8px;background:rgba(255,255,255,0.07);border:1px solid var(--border-subtle);border-radius:8px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;">
+            📝 Practice Quiz
+          </button>
         </div>
       </div>
-    `;
-  }
+    </div>
+  `;
 
-  function selectConceptFromGraph(concept) {
-    selectedConcept = concept;
-    const inspectorContainer = container.querySelector('.mindmap-inspector');
-    if (inspectorContainer) {
-      const tempDiv = document.createElement('div');
-      tempDiv.innerHTML = renderConceptInspectorHtml(selectedConcept, course);
-      if (tempDiv.firstElementChild) {
-        inspectorContainer.replaceWith(tempDiv.firstElementChild);
-        attachInspectorHandlers();
-      }
-    }
-  }
+  // Wire action buttons
+  document.getElementById('mm-go-syllabus')?.addEventListener('click', () => {
+    const t = document.querySelector('.tab-btn[data-tab="syllabus"]');
+    if (t) t.click();
+  });
+  document.getElementById('mm-go-quiz')?.addEventListener('click', () => {
+    const t = document.querySelector('.tab-btn[data-tab="quiz"]');
+    if (t) t.click();
+  });
 
-  function attachEventHandlers() {
-    // Search
-    const searchInput = container.querySelector('#mm-search-input');
-    if (searchInput) {
-      searchInput.addEventListener('input', (e) => {
-        searchQuery = e.target.value;
-        render();
-        const newSearch = container.querySelector('#mm-search-input');
-        if (newSearch) {
-          newSearch.focus();
-          newSearch.selectionStart = newSearch.selectionEnd = newSearch.value.length;
-        }
-      });
-    }
+  // Branch legend hover
+  document.querySelectorAll('.mm-branch-legend-item').forEach(el => {
+    el.addEventListener('mouseenter', () => el.style.background = 'rgba(255,255,255,0.05)');
+    el.addEventListener('mouseleave', () => el.style.background = 'transparent');
+  });
 
-    // Branch filter chips
-    container.querySelectorAll('[data-branch-filter]').forEach(chip => {
-      chip.addEventListener('click', () => {
-        activeBranchId = chip.getAttribute('data-branch-filter');
-        render();
-      });
-    });
-
-    // View toggle
-    container.querySelector('#mm-view-tree-btn')?.addEventListener('click', () => {
-      if (activeViewMode !== 'tree') {
-        activeViewMode = 'tree';
-        render();
-      }
-    });
-
-    container.querySelector('#mm-view-graph-btn')?.addEventListener('click', () => {
-      if (activeViewMode !== 'graph') {
-        activeViewMode = 'graph';
-        render();
-      }
-    });
-
-    // Subconcept card selection in tree view
-    container.querySelectorAll('.mindmap-subconcept-card').forEach(card => {
-      card.addEventListener('click', () => {
-        const cName = decodeURIComponent(card.getAttribute('data-concept-name') || '');
-        let found = null;
-        for (const b of branches) {
-          found = (b.subconcepts || []).find(s => s.name === cName);
-          if (found) break;
-        }
-        if (found) {
-          selectedConcept = found;
-          render();
-        }
-      });
-    });
-
-    attachInspectorHandlers();
-  }
-
-  function attachInspectorHandlers() {
-    // Copy formula
-    container.querySelector('#mm-copy-formula-btn')?.addEventListener('click', (e) => {
-      const btn = e.currentTarget;
-      const formula = decodeURIComponent(btn.getAttribute('data-formula') || '');
-      if (navigator.clipboard) {
-        navigator.clipboard.writeText(formula).then(() => {
-          btn.innerHTML = `✓ Copied!`;
-          setTimeout(() => {
-            btn.innerHTML = `
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
-              </svg>
-              Copy Formula
-            `;
-          }, 2000);
-        });
-      }
-    });
-
-    // Jump to syllabus
-    container.querySelector('#mm-jump-syllabus-btn')?.addEventListener('click', () => {
-      const modal = document.getElementById('brilliant-modal-overlay');
-      const sylTab = modal?.querySelector('.tab-btn[data-tab="syllabus"]');
-      if (sylTab) sylTab.click();
-    });
-
-    // Jump to quiz
-    container.querySelector('#mm-jump-quiz-btn')?.addEventListener('click', () => {
-      const modal = document.getElementById('brilliant-modal-overlay');
-      const quizTab = modal?.querySelector('.tab-btn[data-tab="quiz"]');
-      if (quizTab) quizTab.click();
-    });
-  }
-
-  render();
+  // Start canvas graph
+  setTimeout(() => initMindMapGraph(course, branches, branchColors, mindMap), 30);
 }
 
-function initMindMapGraph(course, branches, onSelectConcept) {
+function initMindMapGraph(course, branches, branchColors, mindMap) {
   const canvas = document.getElementById('mm-graph-canvas');
   if (!canvas) return;
 
   const ctx = canvas.getContext('2d');
-  const rect = canvas.getBoundingClientRect();
+  const container = canvas.parentElement;
   const dpr = window.devicePixelRatio || 1;
-  const W = rect.width || 700;
-  const H = rect.height || 520;
+  const W = container.clientWidth;
+  const H = container.clientHeight;
 
   canvas.width = W * dpr;
   canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
   ctx.scale(dpr, dpr);
 
-  const branchColors = ['#38bdf8', '#818cf8', '#34d399', '#f59e0b', '#ec4899', '#06b6d4'];
+  // ----- Build node graph -----
   const nodes = [];
   const links = [];
-
   const cleanTitle = course.title.replace(/^Chapter\s+\d+:\s*/i, '');
+
+  // Root node (center)
   const rootNode = {
-    id: 'root',
-    type: 'root',
-    title: cleanTitle,
-    x: W / 2,
-    y: H / 2,
-    baseX: W / 2,
-    baseY: H / 2,
-    r: 34,
-    color: '#38bdf8'
+    id: 'root', type: 'root',
+    label: cleanTitle, sublabel: 'Core Concept',
+    x: W / 2, y: H / 2, vx: 0, vy: 0,
+    r: 40, color: '#38bdf8',
+    fixed: true
   };
   nodes.push(rootNode);
 
+  // Branch nodes + subconcept nodes
   const numBranches = branches.length;
   branches.forEach((b, bIdx) => {
-    const angle = (2 * Math.PI * bIdx / numBranches) - Math.PI / 2;
-    const dist = Math.min(W, H) * 0.30;
     const bColor = branchColors[bIdx % branchColors.length];
-    const bX = W / 2 + Math.cos(angle) * dist;
-    const bY = H / 2 + Math.sin(angle) * dist;
+    const bAngle = (2 * Math.PI * bIdx / numBranches) - Math.PI / 2;
+    const bDist = Math.min(W, H) * 0.28;
+    const bX = W / 2 + Math.cos(bAngle) * bDist;
+    const bY = H / 2 + Math.sin(bAngle) * bDist;
 
     const bNode = {
-      id: b.id,
-      type: 'branch',
-      title: b.title,
-      badge: b.badge || '',
-      x: bX,
-      y: bY,
-      baseX: bX,
-      baseY: bY,
-      r: 22,
-      color: bColor,
-      branch: b
+      id: b.id, type: 'branch', branch: b,
+      label: b.title, badge: b.badge || '',
+      x: bX, y: bY, vx: 0, vy: 0,
+      r: 26, color: bColor,
+      angle: bAngle
     };
     nodes.push(bNode);
-    links.push({ source: rootNode, target: bNode, color: bColor, width: 2.5 });
+    links.push({ from: rootNode, to: bNode, color: bColor, strength: 'strong' });
 
     const subs = b.subconcepts || [];
-    const subCount = subs.length;
+    const numSubs = subs.length;
     subs.forEach((s, sIdx) => {
-      const spread = 0.95;
-      const subAngle = angle + (sIdx - (subCount - 1) / 2) * (spread / Math.max(1, subCount - 1 || 1));
-      const subDist = 72;
+      // Spread subconcepts in a fan around the branch node
+      const fanSpread = Math.PI * 0.65;
+      const subAngle = numSubs === 1
+        ? bAngle
+        : bAngle + fanSpread * (sIdx / (numSubs - 1) - 0.5);
+      const subDist = 88;
       const sX = bX + Math.cos(subAngle) * subDist;
       const sY = bY + Math.sin(subAngle) * subDist;
 
       const sNode = {
-        id: `${b.id}-s${sIdx}`,
-        type: 'subconcept',
-        concept: s,
-        title: s.name,
-        formula: s.formula || '',
-        tag: s.tag || '',
-        x: sX,
-        y: sY,
-        baseX: sX,
-        baseY: sY,
-        r: 13,
-        color: bColor
+        id: `${b.id}-s${sIdx}`, type: 'concept', concept: s,
+        label: s.name, formula: s.formula || '', tag: s.tag || '',
+        x: sX, y: sY, vx: 0, vy: 0,
+        r: 14, color: bColor,
+        parentBranch: bNode
       };
       nodes.push(sNode);
-      links.push({ source: bNode, target: sNode, color: bColor, width: 1.5 });
+      links.push({ from: bNode, to: sNode, color: bColor + 'bb', strength: 'normal' });
     });
   });
 
-  let mouse = { x: -1000, y: -1000 };
+  // ----- State -----
   let hoveredNode = null;
   let draggedNode = null;
-  let isDragging = false;
-  let dragOffset = { x: 0, y: 0 };
+  let dragOffX = 0, dragOffY = 0;
+  let selectedNode = null;
+  let panX = 0, panY = 0;
+  let isPanning = false;
+  let panStartX = 0, panStartY = 0;
   let time = 0;
+  let animating = true;
 
-  function onMouseMove(e) {
-    const cRect = canvas.getBoundingClientRect();
-    mouse.x = e.clientX - cRect.left;
-    mouse.y = e.clientY - cRect.top;
+  // ----- Mouse handling -----
+  function getMousePos(e) {
+    const r = canvas.getBoundingClientRect();
+    return { x: (e.clientX - r.left) - panX, y: (e.clientY - r.top) - panY };
+  }
 
+  function findNodeAt(mx, my) {
+    for (let i = nodes.length - 1; i >= 0; i--) {
+      const n = nodes[i];
+      if (Math.hypot(n.x - mx, n.y - my) <= n.r + 8) return n;
+    }
+    return null;
+  }
+
+  canvas.addEventListener('mousemove', e => {
+    const mp = getMousePos(e);
     if (draggedNode) {
-      draggedNode.x = mouse.x - dragOffset.x;
-      draggedNode.y = mouse.y - dragOffset.y;
-      draggedNode.baseX = draggedNode.x;
-      draggedNode.baseY = draggedNode.y;
+      draggedNode.x = mp.x - dragOffX;
+      draggedNode.y = mp.y - dragOffY;
+      return;
+    }
+    if (isPanning) {
+      panX = e.clientX - panStartX;
+      panY = e.clientY - panStartY;
+      return;
+    }
+    const n = findNodeAt(mp.x, mp.y);
+    hoveredNode = n;
+    canvas.style.cursor = n ? 'pointer' : 'grab';
+  });
+
+  canvas.addEventListener('mousedown', e => {
+    const mp = getMousePos(e);
+    const n = findNodeAt(mp.x, mp.y);
+    if (n) {
+      draggedNode = n;
+      dragOffX = mp.x - n.x;
+      dragOffY = mp.y - n.y;
+    } else {
+      isPanning = true;
+      panStartX = e.clientX - panX;
+      panStartY = e.clientY - panY;
+      canvas.style.cursor = 'grabbing';
+    }
+  });
+
+  window.addEventListener('mouseup', e => {
+    if (draggedNode) {
+      const mp = getMousePos(e);
+      if (Math.hypot(draggedNode.x - (mp.x - dragOffX + dragOffX), draggedNode.y - (mp.y - dragOffY + dragOffY)) < 5) {
+        // It was a click, not a drag
+        selectNode(draggedNode);
+      }
+      draggedNode = null;
+    }
+    if (isPanning) {
+      isPanning = false;
+      canvas.style.cursor = 'grab';
+    }
+  });
+
+  canvas.addEventListener('click', e => {
+    const mp = getMousePos(e);
+    const n = findNodeAt(mp.x, mp.y);
+    if (n) selectNode(n);
+  });
+
+  function selectNode(n) {
+    selectedNode = n;
+    showConceptDetail(n);
+  }
+
+  function showConceptDetail(n) {
+    const panel = document.getElementById('mm-concept-detail');
+    if (!panel) return;
+
+    if (n.type === 'root') {
+      panel.innerHTML = `
+        <div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:${n.color};margin-bottom:8px;">Chapter Overview</div>
+          <div style="font-size:15px;font-weight:800;color:#fff;margin-bottom:10px;">${n.label}</div>
+          <div style="font-size:12px;color:#94a3b8;line-height:1.6;">${mindMap.core}</div>
+        </div>
+      `;
       return;
     }
 
-    let found = null;
-    for (let i = nodes.length - 1; i >= 0; i--) {
-      const n = nodes[i];
-      const dist = Math.hypot(n.x - mouse.x, n.y - mouse.y);
-      if (dist <= n.r + 6) {
-        found = n;
-        break;
+    if (n.type === 'branch') {
+      const subs = n.branch.subconcepts || [];
+      panel.innerHTML = `
+        <div>
+          <div style="font-size:11px;font-weight:700;text-transform:uppercase;color:${n.color};margin-bottom:6px;">Branch Topic</div>
+          <div style="font-size:15px;font-weight:800;color:#fff;margin-bottom:4px;">${n.label}</div>
+          <div style="font-size:11px;color:#64748b;margin-bottom:14px;font-weight:600;">${n.badge} · ${subs.length} concepts</div>
+          <div style="display:flex;flex-direction:column;gap:6px;">
+            ${subs.map(s => `
+              <div style="padding:8px 10px;background:#0d1e30;border:1px solid ${n.color}33;border-radius:8px;cursor:pointer;" class="mm-sub-chip" data-name="${encodeURIComponent(s.name)}">
+                <div style="font-size:12px;font-weight:700;color:#fff;margin-bottom:2px;">${s.name}</div>
+                ${s.formula ? `<div style="font-size:11px;color:#facc15;font-family:monospace;">${s.formula}</div>` : ''}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+      // Wire sub-chip clicks to show concept detail
+      panel.querySelectorAll('.mm-sub-chip').forEach(chip => {
+        chip.addEventListener('click', () => {
+          const name = decodeURIComponent(chip.getAttribute('data-name') || '');
+          const sub = subs.find(s => s.name === name);
+          if (sub) {
+            const subNode = nodes.find(nd => nd.type === 'concept' && nd.concept === sub);
+            if (subNode) selectNode(subNode);
+          }
+        });
+      });
+      return;
+    }
+
+    if (n.type === 'concept') {
+      const c = n.concept;
+      panel.innerHTML = `
+        <div>
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px;">
+            <span style="width:8px;height:8px;border-radius:50%;background:${n.color};box-shadow:0 0 6px ${n.color};flex-shrink:0;"></span>
+            <span style="font-size:10px;font-weight:700;text-transform:uppercase;color:${n.color};">${n.parentBranch?.label || 'Concept'}</span>
+          </div>
+          <div style="font-size:15px;font-weight:800;color:#fff;line-height:1.3;margin-bottom:8px;">${c.name}</div>
+          ${c.tag ? `<span style="display:inline-block;font-size:10px;font-weight:700;padding:2px 7px;border-radius:4px;background:${n.color}22;color:${n.color};border:1px solid ${n.color}44;margin-bottom:12px;">${c.tag}</span>` : ''}
+          ${c.formula ? `
+            <div style="background:#040e19;border:1px solid rgba(56,189,248,0.25);border-radius:8px;padding:10px 12px;margin-bottom:12px;">
+              <div style="font-size:9px;font-weight:700;text-transform:uppercase;color:#64748b;margin-bottom:4px;">Formula</div>
+              <div style="font-family:monospace;font-size:13px;font-weight:700;color:#facc15;">${c.formula}</div>
+            </div>
+          ` : ''}
+          <div style="font-size:12px;color:#94a3b8;line-height:1.6;">${c.desc}</div>
+        </div>
+      `;
+    }
+  }
+
+  // ----- Force simulation (gentle) -----
+  function applyForces() {
+    const REPULSION = 2800;
+    const LINK_REST_STRONG = 130;
+    const LINK_REST_NORMAL = 92;
+    const DAMPING = 0.82;
+    const CENTER_PULL = 0.004;
+
+    // Repulsion between all non-root nodes
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const a = nodes[i], b = nodes[j];
+        if (a.fixed && b.fixed) continue;
+        const dx = b.x - a.x, dy = b.y - a.y;
+        const dist = Math.max(Math.hypot(dx, dy), 1);
+        const force = REPULSION / (dist * dist);
+        const fx = (dx / dist) * force, fy = (dy / dist) * force;
+        if (!a.fixed && a !== draggedNode) { a.vx -= fx; a.vy -= fy; }
+        if (!b.fixed && b !== draggedNode) { b.vx += fx; b.vy += fy; }
       }
     }
-    hoveredNode = found;
-    canvas.style.cursor = found ? 'pointer' : 'default';
+
+    // Link spring forces
+    links.forEach(link => {
+      const rest = link.strength === 'strong' ? LINK_REST_STRONG : LINK_REST_NORMAL;
+      const dx = link.to.x - link.from.x, dy = link.to.y - link.from.y;
+      const dist = Math.max(Math.hypot(dx, dy), 1);
+      const delta = dist - rest;
+      const fx = (dx / dist) * delta * 0.06;
+      const fy = (dy / dist) * delta * 0.06;
+      if (!link.from.fixed && link.from !== draggedNode) { link.from.vx += fx; link.from.vy += fy; }
+      if (!link.to.fixed && link.to !== draggedNode) { link.to.vx -= fx; link.to.vy -= fy; }
+    });
+
+    // Center gravity toward initial positions
+    nodes.forEach(n => {
+      if (n.fixed || n === draggedNode) return;
+      n.vx *= DAMPING;
+      n.vy *= DAMPING;
+      n.x += n.vx;
+      n.y += n.vy;
+    });
   }
 
-  function onMouseDown(e) {
-    if (hoveredNode) {
-      draggedNode = hoveredNode;
-      isDragging = true;
-      dragOffset.x = mouse.x - hoveredNode.x;
-      dragOffset.y = mouse.y - hoveredNode.y;
-    }
+  // ----- Drawing -----
+  function drawArrow(ctx, x1, y1, x2, y2, r2) {
+    const dx = x2 - x1, dy = y2 - y1;
+    const len = Math.hypot(dx, dy);
+    const ex = x2 - (dx / len) * r2;
+    const ey = y2 - (dy / len) * r2;
+    return { ex, ey };
   }
 
-  function onMouseUp(e) {
-    if (hoveredNode) {
-      if (hoveredNode.type === 'subconcept' && hoveredNode.concept) {
-        onSelectConcept(hoveredNode.concept);
-      } else if (hoveredNode.type === 'branch' && hoveredNode.branch) {
-        const firstSub = (hoveredNode.branch.subconcepts || [])[0];
-        if (firstSub) onSelectConcept(firstSub);
+  function wrapText(ctx, text, maxWidth) {
+    const words = text.split(' ');
+    const lines = [];
+    let line = '';
+    for (const w of words) {
+      const test = line ? line + ' ' + w : w;
+      if (ctx.measureText(test).width > maxWidth && line) {
+        lines.push(line);
+        line = w;
+      } else {
+        line = test;
       }
     }
-    draggedNode = null;
-    isDragging = false;
+    if (line) lines.push(line);
+    return lines.slice(0, 2); // max 2 lines
   }
 
-  canvas.addEventListener('mousemove', onMouseMove);
-  canvas.addEventListener('mousedown', onMouseDown);
-  window.addEventListener('mouseup', onMouseUp);
-
-  function animate() {
-    time += 0.02;
+  function draw() {
+    ctx.save();
+    ctx.clearRect(0, 0, W, H);
 
     // Background
-    ctx.clearRect(0, 0, W, H);
     ctx.fillStyle = '#06111d';
     ctx.fillRect(0, 0, W, H);
 
-    // Subtle radial background gradient
-    const bgGrad = ctx.createRadialGradient(W / 2, H / 2, 10, W / 2, H / 2, Math.max(W, H) * 0.6);
-    bgGrad.addColorStop(0, 'rgba(15, 33, 56, 0.6)');
-    bgGrad.addColorStop(1, 'rgba(6, 17, 29, 0.95)');
-    ctx.fillStyle = bgGrad;
+    // Subtle center glow
+    const grd = ctx.createRadialGradient(W/2 + panX, H/2 + panY, 10, W/2 + panX, H/2 + panY, 280);
+    grd.addColorStop(0, 'rgba(56,189,248,0.06)');
+    grd.addColorStop(1, 'transparent');
+    ctx.fillStyle = grd;
     ctx.fillRect(0, 0, W, H);
 
-    // Subtle breathing displacement
-    nodes.forEach((n, idx) => {
-      if (n !== draggedNode && n.type !== 'root') {
-        const wobble = Math.sin(time + idx * 0.8) * 2;
-        n.x = n.baseX + wobble;
-        n.y = n.baseY + Math.cos(time + idx * 0.8) * 2;
-      }
-    });
+    ctx.translate(panX, panY);
 
-    // Draw Links
+    // Draw links as curved bezier paths
     links.forEach(link => {
-      const isHighlighted = hoveredNode && (hoveredNode === link.source || hoveredNode === link.target);
-      ctx.beginPath();
-      ctx.moveTo(link.source.x, link.source.y);
-      ctx.lineTo(link.target.x, link.target.y);
+      const { from: a, to: b } = link;
+      const isHighlighted = hoveredNode && (hoveredNode === a || hoveredNode === b || hoveredNode === selectedNode);
+      const isSelected = selectedNode && (selectedNode === a || selectedNode === b);
 
-      ctx.strokeStyle = isHighlighted ? '#ffffff' : (link.color + (link.source.type === 'root' ? '99' : '55'));
-      ctx.lineWidth = isHighlighted ? link.width + 1.5 : link.width;
-      if (isHighlighted) {
+      const cx = (a.x + b.x) / 2 + (b.y - a.y) * 0.08;
+      const cy = (a.y + b.y) / 2 - (b.x - a.x) * 0.08;
+
+      ctx.beginPath();
+      ctx.moveTo(a.x, a.y);
+      ctx.quadraticCurveTo(cx, cy, b.x, b.y);
+      ctx.strokeStyle = isSelected ? link.color.replace('bb', '') + 'dd'
+                      : isHighlighted ? link.color + 'cc'
+                      : link.color.replace('bb','') + '44';
+      ctx.lineWidth = isSelected ? 2.5 : isHighlighted ? 2 : 1.2;
+      ctx.setLineDash(link.strength === 'normal' ? [4, 4] : []);
+      if (isSelected || isHighlighted) {
         ctx.shadowColor = link.color;
-        ctx.shadowBlur = 10;
-      } else {
-        ctx.shadowBlur = 0;
+        ctx.shadowBlur = 6;
       }
       ctx.stroke();
       ctx.shadowBlur = 0;
+      ctx.setLineDash([]);
     });
 
-    // Draw Nodes
+    // Draw nodes
     nodes.forEach(n => {
       const isHovered = n === hoveredNode;
+      const isSelected = n === selectedNode;
 
       if (n.type === 'root') {
-        // Central Root Node
-        const pulse = Math.sin(time * 2) * 3;
+        // Pulsing glow ring
+        const pulse = 1 + 0.08 * Math.sin(time * 1.8);
+        const gr = ctx.createRadialGradient(n.x, n.y, n.r * 0.4, n.x, n.y, n.r * pulse * 2.2);
+        gr.addColorStop(0, 'rgba(56,189,248,0.25)');
+        gr.addColorStop(1, 'transparent');
         ctx.beginPath();
-        ctx.arc(n.x, n.y, n.r + pulse + (isHovered ? 4 : 0), 0, Math.PI * 2);
-        ctx.fillStyle = 'rgba(56, 189, 248, 0.2)';
+        ctx.arc(n.x, n.y, n.r * 2.2 * pulse, 0, Math.PI * 2);
+        ctx.fillStyle = gr;
         ctx.fill();
 
+        // Main circle
         ctx.beginPath();
         ctx.arc(n.x, n.y, n.r, 0, Math.PI * 2);
-        ctx.fillStyle = '#0e2439';
+        const rootGrad = ctx.createRadialGradient(n.x - 8, n.y - 8, 0, n.x, n.y, n.r);
+        rootGrad.addColorStop(0, '#1a4a6b');
+        rootGrad.addColorStop(1, '#0a2035');
+        ctx.fillStyle = rootGrad;
+        ctx.fill();
         ctx.strokeStyle = '#38bdf8';
-        ctx.lineWidth = 3;
+        ctx.lineWidth = 2.5;
         ctx.shadowColor = '#38bdf8';
-        ctx.shadowBlur = 14;
-        ctx.fill();
-        ctx.stroke();
-        ctx.shadowBlur = 0;
-
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 12px Inter, system-ui, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        
-        const words = n.title.split(' ');
-        if (words.length > 2) {
-          ctx.fillText(words.slice(0, 2).join(' '), n.x, n.y - 6);
-          ctx.fillText(words.slice(2).join(' '), n.x, n.y + 8);
-        } else {
-          ctx.fillText(n.title, n.x, n.y);
-        }
-      } else if (n.type === 'branch') {
-        // Branch Node
-        ctx.beginPath();
-        ctx.arc(n.x, n.y, n.r + (isHovered ? 4 : 0), 0, Math.PI * 2);
-        ctx.fillStyle = '#0a1a2c';
-        ctx.strokeStyle = n.color;
-        ctx.lineWidth = isHovered ? 3 : 2;
-        if (isHovered) {
-          ctx.shadowColor = n.color;
-          ctx.shadowBlur = 12;
-        }
-        ctx.fill();
-        ctx.stroke();
-        ctx.shadowBlur = 0;
-
-        // Inner dot
-        ctx.beginPath();
-        ctx.arc(n.x, n.y, 6, 0, Math.PI * 2);
-        ctx.fillStyle = n.color;
-        ctx.fill();
-
-        // Label below
-        ctx.fillStyle = '#e2e8f0';
-        ctx.font = 'bold 11px Inter, system-ui, sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-        ctx.fillText(n.title, n.x, n.y + n.r + 6);
-      } else if (n.type === 'subconcept') {
-        // Subconcept Node
-        ctx.beginPath();
-        ctx.arc(n.x, n.y, n.r + (isHovered ? 3 : 0), 0, Math.PI * 2);
-        ctx.fillStyle = isHovered ? n.color : '#0f2238';
-        ctx.strokeStyle = n.color;
-        ctx.lineWidth = 1.5;
-        if (isHovered) {
-          ctx.shadowColor = n.color;
-          ctx.shadowBlur = 10;
-        }
-        ctx.fill();
+        ctx.shadowBlur = 16;
         ctx.stroke();
         ctx.shadowBlur = 0;
 
         // Label
-        ctx.fillStyle = isHovered ? '#ffffff' : '#94a3b8';
-        ctx.font = '10px Inter, system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.font = 'bold 11px Inter, system-ui, sans-serif';
+        ctx.fillStyle = '#ffffff';
+        const lines = wrapText(ctx, n.label, n.r * 1.6);
+        const lineH = 14;
+        lines.forEach((line, i) => {
+          ctx.fillText(line, n.x, n.y + (i - (lines.length - 1) / 2) * lineH);
+        });
+
+      } else if (n.type === 'branch') {
+        const extraR = isHovered || isSelected ? 4 : 0;
+
+        // Glow
+        if (isHovered || isSelected) {
+          const glow = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, n.r * 2.5);
+          glow.addColorStop(0, n.color + '40');
+          glow.addColorStop(1, 'transparent');
+          ctx.beginPath();
+          ctx.arc(n.x, n.y, n.r * 2.5, 0, Math.PI * 2);
+          ctx.fillStyle = glow;
+          ctx.fill();
+        }
+
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.r + extraR, 0, Math.PI * 2);
+        const bGrad = ctx.createRadialGradient(n.x - 6, n.y - 6, 0, n.x, n.y, n.r + extraR);
+        bGrad.addColorStop(0, n.color + '30');
+        bGrad.addColorStop(1, '#0a1826');
+        ctx.fillStyle = bGrad;
+        ctx.fill();
+        ctx.strokeStyle = n.color;
+        ctx.lineWidth = isSelected ? 3 : 2;
+        ctx.shadowColor = n.color;
+        ctx.shadowBlur = isSelected ? 16 : isHovered ? 10 : 5;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Inner filled dot
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, 5, 0, Math.PI * 2);
+        ctx.fillStyle = n.color;
+        ctx.fill();
+
+        // Label
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
-        const label = n.title.length > 18 ? n.title.substring(0, 16) + '…' : n.title;
-        ctx.fillText(label, n.x, n.y + n.r + 4);
+        ctx.font = 'bold 10px Inter, system-ui, sans-serif';
+        ctx.fillStyle = isHovered || isSelected ? '#ffffff' : '#cbd5e1';
+        const bLines = wrapText(ctx, n.label, 100);
+        bLines.forEach((line, i) => {
+          ctx.fillText(line, n.x, n.y + n.r + 6 + extraR + i * 12);
+        });
+
+      } else if (n.type === 'concept') {
+        const extraR = isHovered || isSelected ? 3 : 0;
+
+        ctx.beginPath();
+        ctx.arc(n.x, n.y, n.r + extraR, 0, Math.PI * 2);
+        ctx.fillStyle = isSelected ? n.color : (isHovered ? n.color + '55' : '#0d1e30');
+        ctx.fill();
+        ctx.strokeStyle = n.color;
+        ctx.lineWidth = isSelected ? 2.5 : 1.5;
+        ctx.shadowColor = n.color;
+        ctx.shadowBlur = isSelected ? 14 : isHovered ? 8 : 0;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // Label
+        ctx.textAlign = 'center';
+        ctx.font = isSelected ? 'bold 9px Inter, system-ui' : '9px Inter, system-ui';
+        ctx.textBaseline = 'top';
+        ctx.fillStyle = isSelected ? '#ffffff' : (isHovered ? '#e2e8f0' : '#94a3b8');
+        const label = n.label.length > 16 ? n.label.slice(0, 14) + '…' : n.label;
+        ctx.fillText(label, n.x, n.y + n.r + 4 + extraR);
+
+        // Formula preview on hover
+        if ((isHovered || isSelected) && n.formula) {
+          const tipW = Math.min(ctx.measureText(n.formula).width + 24, 200);
+          const tipH = 22;
+          const tipX = n.x - tipW / 2;
+          const tipY = n.y - n.r - tipH - 6;
+
+          ctx.fillStyle = 'rgba(8,22,36,0.95)';
+          ctx.strokeStyle = n.color;
+          ctx.lineWidth = 1;
+          roundRect(ctx, tipX, tipY, tipW, tipH, 5, true, true);
+          ctx.fillStyle = '#facc15';
+          ctx.font = '10px monospace';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(n.formula.length > 24 ? n.formula.slice(0,22)+'…' : n.formula, n.x, tipY + tipH / 2);
+        }
       }
     });
 
-    // Tooltip if hovering a subconcept
-    if (hoveredNode && hoveredNode.type === 'subconcept') {
-      const tipText = hoveredNode.title;
-      const formulaText = hoveredNode.formula ? hoveredNode.formula : '';
-      
-      ctx.font = 'bold 11px Inter, system-ui, sans-serif';
-      const textWidth = Math.max(ctx.measureText(tipText).width, ctx.measureText(formulaText).width) + 24;
-      const tipH = formulaText ? 44 : 28;
-      const tipX = Math.min(W - textWidth - 10, Math.max(10, hoveredNode.x - textWidth / 2));
-      const tipY = Math.max(10, hoveredNode.y - hoveredNode.r - tipH - 8);
+    ctx.restore();
+    time += 0.016;
 
-      ctx.fillStyle = 'rgba(10, 24, 40, 0.95)';
-      ctx.strokeStyle = hoveredNode.color;
-      ctx.lineWidth = 1;
-      ctx.shadowColor = 'rgba(0,0,0,0.5)';
-      ctx.shadowBlur = 8;
-      roundRect(ctx, tipX, tipY, textWidth, tipH, 6, true, true);
-      ctx.shadowBlur = 0;
-
-      ctx.fillStyle = '#ffffff';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      ctx.fillText(tipText, tipX + 12, tipY + 7);
-
-      if (formulaText) {
-        ctx.fillStyle = '#facc15';
-        ctx.font = '10px monospace';
-        ctx.fillText(formulaText, tipX + 12, tipY + 24);
-      }
+    if (animating) {
+      applyForces();
+      currentMindMapCanvasAnimation = requestAnimationFrame(draw);
     }
-
-    currentMindMapCanvasAnimation = requestAnimationFrame(animate);
   }
 
-  currentMindMapCanvasAnimation = requestAnimationFrame(animate);
+  animating = true;
+  draw();
+
+  // Cleanup on tab switch
+  canvas._cleanup = () => {
+    animating = false;
+    canvas.removeEventListener('mousemove', () => {});
+  };
 }
 
 function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
@@ -1492,7 +1381,6 @@ function roundRect(ctx, x, y, width, height, radius, fill, stroke) {
   if (fill) ctx.fill();
   if (stroke) ctx.stroke();
 }
-
 // -----------------------------------------------------------------------------
 // Interactive Simulators (HR Diagram, Nuclear Decay, Projectile, Waves, Python)
 // -----------------------------------------------------------------------------
