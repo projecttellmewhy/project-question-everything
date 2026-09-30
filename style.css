@@ -5,7 +5,7 @@
 
 :root {
   --bg-primary: #031427;
-  --bg-header: #031427;
+  --bg-header: rgba(2, 11, 22, 0.88);
   --bg-container: #0a1826;
   --bg-card: #0e1c2b;
   --bg-card-hover: #132437;
@@ -79,12 +79,14 @@ button, input, textarea, select {
    ========================================================================== */
 .brilliant-header {
   width: 100%;
-  background-color: var(--bg-header);
-  border-bottom: 1px solid var(--border-subtle);
+  background: var(--bg-header);
+  border-bottom: 1px solid rgba(56, 189, 248, 0.12);
   position: sticky;
   top: 0;
   z-index: 50;
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
 }
 
 .header-inner {
