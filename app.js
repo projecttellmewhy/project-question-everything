@@ -196,7 +196,7 @@ function renderLearningPaths() {
         ${path.courses.map(c => {
           const isDone = !!appState.completedCourses[c.id];
           return `
-            <div class="course-tile" data-course-id="${c.id}">
+            <a class="course-tile" data-course-id="${c.id}" href="chapter.html?id=${c.id}">
               <div class="tile-box" style="${isDone ? 'border-color: #22c55e;' : ''}">
                 <div class="tile-icon-wrap" style="background: ${getCourseGradient(c)};">
                   ${renderTileIcon(c)}
@@ -204,21 +204,13 @@ function renderLearningPaths() {
               </div>
               <span class="tile-title">${c.title}</span>
               ${isDone ? `<span style="font-size: 11px; color: #22c55e; font-weight: 700;">✓ Completed</span>` : ''}
-            </div>
+            </a>
           `;
         }).join('')}
       </div>
     </div>
   `;
   }).join('');
-
-  // Attach click to open course reader modal
-  container.querySelectorAll('.course-tile').forEach(tile => {
-    tile.addEventListener('click', () => {
-      const courseId = tile.getAttribute('data-course-id');
-      openCourseModal(courseId);
-    });
-  });
 }
 
 function renderPathHeaderIcon(type, color) {
