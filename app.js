@@ -1146,7 +1146,6 @@ function renderNavbarAuth() {
   if (!appState.currentUser) {
     container.innerHTML = `
       <button class="nav-signin-btn" onclick="openAuthModal('signin')">Sign In</button>
-      <button class="nav-signup-btn" onclick="openAuthModal('signup')">Get Started</button>
     `;
   } else {
     const user = appState.currentUser;
