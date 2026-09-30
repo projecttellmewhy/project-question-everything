@@ -171,9 +171,6 @@ function renderLearningPaths() {
     return `
     <div class="path-section" id="${path.id}">
       <div class="path-section-header">
-        <div class="path-section-icon" style="background: rgba(255, 255, 255, 0.05); border: 1px solid var(--border-subtle);">
-          ${renderPathHeaderIcon(path.icon, path.color)}
-        </div>
         <div class="path-section-text" style="flex: 1;">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px;">
             <div>
@@ -211,44 +208,6 @@ function renderLearningPaths() {
     </div>
   `;
   }).join('');
-}
-
-function renderPathHeaderIcon(type, color) {
-  if (type === 'motion') {
-    return `
-      <svg width="26" height="26" fill="none" stroke="${color || '#4f5df5'}" stroke-width="2" viewBox="0 0 24 24">
-        <path d="M13 10V3L4 14h7v7l9-11h-7z" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    `;
-  } else if (type === 'thermal') {
-    return `
-      <svg width="26" height="26" fill="none" stroke="${color || '#f59e0b'}" stroke-width="2" viewBox="0 0 24 24">
-        <path d="M12 2c1.5 3 4 4.5 4 8a4 4 0 01-8 0c0-3.5 2.5-5 4-8z" stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    `;
-  } else if (type === 'waves') {
-    return `
-      <svg width="26" height="26" fill="none" stroke="${color || '#10b981'}" stroke-width="2" viewBox="0 0 24 24">
-        <path d="M2 12c3-6 5-6 8 0s5 6 8 0 5-6 8 0" stroke-linecap="round"/>
-      </svg>
-    `;
-  } else if (type === 'fields') {
-    return `
-      <div style="position: relative; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
-        <div style="position: absolute; width: 28px; height: 28px; border: 2px dashed ${color || '#38bdf8'}; border-radius: 50%;"></div>
-        <div style="width: 10px; height: 10px; border-radius: 50%; background: ${color || '#38bdf8'};"></div>
-      </div>
-    `;
-  } else {
-    // atom / quantum
-    return `
-      <div style="position: relative; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;">
-        <div style="position: absolute; width: 32px; height: 16px; border: 2px solid #f59e0b; border-radius: 50%; transform: rotate(30deg);"></div>
-        <div style="position: absolute; width: 32px; height: 16px; border: 2px solid #f59e0b; border-radius: 50%; transform: rotate(-30deg);"></div>
-        <div style="position: absolute; width: 8px; height: 8px; border-radius: 50%; background: #ec4899; box-shadow: 0 0 8px #ec4899;"></div>
-      </div>
-    `;
-  }
 }
 
 function getCourseGradient(course) {
