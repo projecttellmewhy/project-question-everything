@@ -2069,6 +2069,12 @@ footer {
   background: #08182b;
 }
 
+.contact-form-select option {
+  background: #081624;
+  color: #ffffff;
+  padding: 8px 12px;
+}
+
 .contact-form-textarea {
   min-height: 120px;
   resize: vertical;

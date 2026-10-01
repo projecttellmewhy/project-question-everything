@@ -86,7 +86,12 @@
                 Instant Messaging
               </div>
               <h3 style="font-size: 18px; font-weight: 800; color: #fff; margin: 0 0 4px 0;">WhatsApp</h3>
-              <p style="font-size: 15px; font-weight: 700; color: #38bdf8; margin: 0 0 6px 0; font-family: monospace;">+91 9110827904</p>
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                <span style="font-size: 15px; font-weight: 700; color: #38bdf8; font-family: monospace;">+91 9110827904</span>
+                <button type="button" onclick="copyContact('9110827904', this)" title="Copy WhatsApp Number" style="background: rgba(255,255,255,0.08); border: 1px solid var(--border-subtle); color: #cbd5e1; border-radius: 6px; padding: 2px 8px; font-size: 11px; cursor: pointer;">
+                  Copy
+                </button>
+              </div>
               <p style="font-size: 13px; color: var(--text-secondary); margin: 0 0 12px 0; line-height: 1.4;">
                 Chat directly with our team for quick responses, course guidance, and inquiries.
               </p>
@@ -113,7 +118,12 @@
                 Official Support
               </div>
               <h3 style="font-size: 18px; font-weight: 800; color: #fff; margin: 0 0 4px 0;">Email Us</h3>
-              <p style="font-size: 14.5px; font-weight: 700; color: #38bdf8; margin: 0 0 6px 0; font-family: monospace;">projecttellmewhy@gmail.com</p>
+              <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                <span style="font-size: 14.5px; font-weight: 700; color: #38bdf8; font-family: monospace;">projecttellmewhy@gmail.com</span>
+                <button type="button" onclick="copyContact('projecttellmewhy@gmail.com', this)" title="Copy Email Address" style="background: rgba(255,255,255,0.08); border: 1px solid var(--border-subtle); color: #cbd5e1; border-radius: 6px; padding: 2px 8px; font-size: 11px; cursor: pointer;">
+                  Copy
+                </button>
+              </div>
               <p style="font-size: 13px; color: var(--text-secondary); margin: 0 0 12px 0; line-height: 1.4;">
                 Send us detailed queries, partnership requests, or feedback on our interactive curriculum.
               </p>
@@ -160,7 +170,8 @@
           <div class="contact-form-group">
             <label class="contact-form-label" for="contact-subject">Topic</label>
             <select id="contact-subject" class="contact-form-select">
-              <option value="Nuclear Physics & Stars">Nuclear Physics &amp; Stars Curriculum</option>
+              <option value="Physics Curriculum">Physics Curriculum &amp; Chapters</option>
+              <option value="Nuclear Physics & Stars">Nuclear Physics &amp; Stars</option>
               <option value="General Inquiry">General Inquiry</option>
               <option value="Feedback / Suggestions">Feedback &amp; Suggestions</option>
               <option value="Technical Support">Technical Support</option>
@@ -212,6 +223,20 @@
   <script src="curriculum-data.js?v=18"></script>
   <script src="app.js?v=18"></script>
   <script>
+    function copyContact(text, btn) {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text).then(() => {
+          const original = btn.innerText;
+          btn.innerText = 'Copied!';
+          btn.style.color = '#22c55e';
+          setTimeout(() => {
+            btn.innerText = original;
+            btn.style.color = '';
+          }, 2000);
+        });
+      }
+    }
+
     function handleContactSubmit(e) {
       e.preventDefault();
       const name = document.getElementById('contact-name').value.trim();
@@ -226,27 +251,40 @@
       submitBtn.disabled = true;
       submitBtn.innerHTML = 'Sending...';
 
+      const mailSubject = encodeURIComponent(`[NovaLeran Inquiry] ${subject} - ${name}`);
+      const mailBody = encodeURIComponent(`Name: ${name}\nEmail: ${email}\nTopic: ${subject}\n\nMessage:\n${message}`);
+      const mailtoUrl = `mailto:projecttellmewhy@gmail.com?subject=${mailSubject}&body=${mailBody}`;
+
+      const waText = encodeURIComponent(`Hi NovaLeran, my name is ${name} (${email}). Topic: ${subject} - ${message}`);
+      const waUrl = `https://wa.me/919110827904?text=${waText}`;
+
       setTimeout(() => {
         statusBox.style.display = 'block';
         statusBox.innerHTML = `
-          <div style="background: rgba(34, 197, 94, 0.15); border: 1px solid #22c55e; color: #86efac; padding: 14px 16px; border-radius: 10px; font-size: 13.5px; line-height: 1.5;">
-            <strong>✓ Message Prepared!</strong><br>
-            Thank you, ${name}. We've received your request and will reach out to <strong>${email}</strong> shortly.
+          <div style="background: rgba(34, 197, 94, 0.12); border: 1px solid #22c55e; color: #86efac; padding: 14px 16px; border-radius: 10px; font-size: 13.5px; line-height: 1.55;">
+            <strong>✓ Message Ready!</strong><br>
+            Thank you, ${name}. Choose your preferred channel to send:
             <div style="margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap;">
-              <a href="mailto:projecttellmewhy@gmail.com?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent('From: ' + name + ' (' + email + ')\n\n' + message)}" class="contact-action-btn email-btn" style="padding: 6px 12px; font-size: 12px; margin-top: 0;">
-                Open in Email Client
+              <a href="${mailtoUrl}" class="contact-action-btn email-btn" style="padding: 7px 14px; font-size: 12.5px; margin-top: 0;">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                  <path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                </svg>
+                <span>Send via Email Client</span>
               </a>
-              <a href="https://wa.me/919110827904?text=${encodeURIComponent('Hi NovaLeran, my name is ' + name + ' (' + email + '). Topic: ' + subject + ' - ' + message)}" target="_blank" class="contact-action-btn whatsapp-btn" style="padding: 6px 12px; font-size: 12px; margin-top: 0;">
-                Send via WhatsApp
+              <a href="${waUrl}" target="_blank" rel="noopener noreferrer" class="contact-action-btn whatsapp-btn" style="padding: 7px 14px; font-size: 12.5px; margin-top: 0;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0012.04 2zm0 17.72c-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.17 8.17 0 01-1.25-4.35c0-4.52 3.68-8.19 8.19-8.19 2.19 0 4.25.85 5.8 2.4 1.55 1.55 2.4 3.61 2.4 5.79 0 4.52-3.67 8.2-8.15 8.2zm4.49-6.14c-.25-.12-1.47-.72-1.7-.81-.23-.08-.39-.12-.56.12-.17.25-.64.81-.79.97-.14.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.02-.38.11-.51.11-.11.25-.29.37-.43.12-.14.17-.25.25-.41.08-.17.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.4-.42-.56-.43h-.47c-.17 0-.43.06-.66.31-.22.25-.86.84-.86 2.06 0 1.21.89 2.39 1.01 2.56.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.53.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.68-1.18.21-.58.21-1.07.14-1.18-.06-.11-.23-.18-.47-.3z"/>
+                </svg>
+                <span>Send via WhatsApp</span>
               </a>
             </div>
           </div>
         `;
 
         submitBtn.disabled = false;
-        submitBtn.innerHTML = '✓ Sent Successfully';
+        submitBtn.innerHTML = '✓ Sent / Ready';
         submitBtn.style.background = '#22c55e';
-      }, 600);
+      }, 300);
     }
   </script>
 </body>

@@ -74,18 +74,27 @@ function initHeader() {
   // Brand click
   const logo = document.getElementById('brand-logo-btn');
   if (logo) {
-    logo.addEventListener('click', () => {
-      filterBySubject('All');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+    logo.addEventListener('click', (e) => {
+      const isCurrentIndex = window.location.pathname.endsWith('index.html') || window.location.pathname.endsWith('/') || window.location.pathname === '';
+      if (isCurrentIndex) {
+        e.preventDefault();
+        filterBySubject('All');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     });
   }
 
   // Nav Items
   document.querySelectorAll('.nav-item').forEach(item => {
     item.addEventListener('click', (e) => {
-      e.preventDefault();
-      filterBySubject('All');
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      const isCourses = item.getAttribute('data-nav') === 'courses';
+      const isCurrentIndex = window.location.pathname.endsWith('index.html') || window.location.pathname.endsWith('/') || window.location.pathname === '';
+
+      if (isCourses && isCurrentIndex) {
+        e.preventDefault();
+        filterBySubject('All');
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
     });
   });
 
