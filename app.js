@@ -132,32 +132,84 @@ function renderLearningPaths() {
   const container = document.getElementById('learning-paths-list');
   if (!container) return;
 
-  // Only keep Nuclear fusion and stars chapter (ch-25)
-  const fusionChapter = (curriculum.chapters || []).find(c => c.id === 'ch-25') || {
-    id: "ch-25",
-    num: 25,
-    title: "Nuclear fusion and stars",
-    subject: "Physics",
-    gradient: "linear-gradient(135deg, #180928, #3b0764)",
-    iconType: "atom"
-  };
+  const paths = curriculum.learningPaths || [];
+  
+  // Filter paths by active subject category or path ID
+  let filteredPaths = appState.activeCategory === 'All'
+    ? paths
+    : paths.filter(p => p.id === appState.activeCategory || p.category === appState.activeCategory);
 
-  const isDone = !!appState.completedCourses[fusionChapter.id];
+  // If search query active, filter courses inside paths
+  if (appState.searchQuery) {
+    const q = appState.searchQuery.toLowerCase();
+    filteredPaths = filteredPaths.map(p => {
+      const matchingCourses = (p.courses || []).filter(c => {
+        const titleMatch = c.title.toLowerCase().includes(q);
+        const descMatch = (c.desc || '').toLowerCase().includes(q);
+        return titleMatch || descMatch;
+      });
+      return { ...p, courses: matchingCourses };
+    }).filter(p => p.courses.length > 0);
+  }
 
-  container.innerHTML = `
-    <div class="chapters-showcase-container">
-      <a class="course-tile" data-course-id="${fusionChapter.id}" href="chapter.html?id=${fusionChapter.id}">
-        <div class="tile-box" style="${isDone ? 'border-color: #22c55e;' : ''}">
-          <span class="tile-tag-new">NEW</span>
-          <div class="tile-icon-wrap" style="background: ${getCourseGradient(fusionChapter)};">
-            ${renderTileIcon(fusionChapter)}
+  if (filteredPaths.length === 0) {
+    container.innerHTML = `
+      <div style="text-align: center; padding: 60px 20px; background: var(--bg-container); border-radius: 16px; border: 1px dashed var(--border-subtle); margin-top: 20px;">
+        <h3 style="font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 8px;">No Courses Found</h3>
+        <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px;">Try searching for "Relativity", "Kinematics", "Nuclear", "Thermodynamics", or "Optics".</p>
+        <button class="action-start-btn" style="margin: 0 auto;" onclick="filterBySubject('All')">Clear Search &amp; Show All</button>
+      </div>
+    `;
+    return;
+  }
+
+  container.innerHTML = filteredPaths.map(path => {
+    const pathCourses = path.courses || [];
+    const doneCount = pathCourses.filter(c => appState.completedCourses[c.id]).length;
+    const pathPct = pathCourses.length ? Math.round((doneCount / pathCourses.length) * 100) : 0;
+
+    return `
+    <div class="path-section" id="${path.id}">
+      <div class="path-section-header">
+        <div class="path-section-text" style="flex: 1;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px;">
+            <div>
+              <h3 class="path-section-title">${path.title}</h3>
+              <p class="path-section-desc">${path.subtitle}</p>
+            </div>
+            <div style="min-width: 180px; text-align: right;">
+              <div style="font-size: 12px; font-weight: 700; color: #38bdf8; margin-bottom: 4px;">
+                ${doneCount}/${pathCourses.length} Chapters (${pathPct}%)
+              </div>
+              <div class="path-progress-track" style="height: 6px;">
+                <div class="path-progress-fill" style="width: ${pathPct}%;"></div>
+              </div>
+            </div>
           </div>
         </div>
-        <span class="tile-title">${fusionChapter.title}</span>
-        ${isDone ? `<span style="font-size: 11px; color: #22c55e; font-weight: 700;">✓ Completed</span>` : ''}
-      </a>
+      </div>
+
+      <div class="path-track-container">
+        ${path.courses.map(c => {
+          const isDone = !!appState.completedCourses[c.id];
+          const isNew = c.id === 'ch-25';
+          return `
+            <a class="course-tile" data-course-id="${c.id}" href="chapter.html?id=${c.id}">
+              <div class="tile-box" style="${isDone ? 'border-color: #22c55e;' : ''}">
+                ${isNew ? '<span class="tile-tag-new">NEW</span>' : ''}
+                <div class="tile-icon-wrap" style="background: ${getCourseGradient(c)};">
+                  ${renderTileIcon(c)}
+                </div>
+              </div>
+              <span class="tile-title">${c.title}</span>
+              ${isDone ? `<span style="font-size: 11px; color: #22c55e; font-weight: 700;">✓ Completed</span>` : ''}
+            </a>
+          `;
+        }).join('')}
+      </div>
     </div>
-  `;
+    `;
+  }).join('');
 }
 
 function getCourseGradient(course) {
@@ -1059,8 +1111,8 @@ function renderNavbarAuth() {
   } else {
     const user = appState.currentUser;
     const initials = getInitials(user.name);
-    const completed = appState.completedCourses['ch-25'] ? 1 : 0;
-    const total = 1;
+    const completed = Object.values(appState.completedCourses).filter(Boolean).length;
+    const total = (curriculum.chapters || []).length || 25;
     const percent = Math.round((completed / total) * 100);
 
     container.innerHTML = `

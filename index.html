@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <link rel="stylesheet" href="style.css?v=17">
+  <link rel="stylesheet" href="style.css?v=18">
   <!-- Google Identity Services SDK for Google Sign-In -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
@@ -67,9 +67,30 @@
       <p class="page-subtitle">Interactive Physics &amp; Natural Sciences</p>
     </div>
 
+    <!-- Search & Filter Controls in Learning Paths -->
+    <div class="learning-paths-controls">
+      <!-- Subject Category Filter Buttons -->
+      <div class="subject-filter-row">
+        <button class="subject-filter-btn active" data-subject="All">All Paths</button>
+        <button class="subject-filter-btn" data-subject="path-physics-unit-a">Space, Time &amp; Motion</button>
+        <button class="subject-filter-btn" data-subject="path-physics-unit-b">Particulate Matter</button>
+        <button class="subject-filter-btn" data-subject="path-physics-unit-c">Wave Behaviour</button>
+        <button class="subject-filter-btn" data-subject="path-physics-unit-d">Fields</button>
+        <button class="subject-filter-btn" data-subject="path-physics-unit-e">Nuclear &amp; Quantum</button>
+      </div>
+
+      <!-- Quick Search Bar -->
+      <div class="search-field">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <input type="text" id="path-search-input" class="search-input" placeholder="Search physics courses, topics, formulas...">
+      </div>
+    </div>
+
     <!-- Chapter Grid Container (Rendered dynamically by app.js) -->
     <div id="learning-paths-list">
-      <!-- Chapter card rendered here -->
+      <!-- Chapter tracks rendered here -->
     </div>
 
   </main>
@@ -96,7 +117,7 @@
   </footer>
 
   <!-- Scripts -->
-  <script src="curriculum-data.js?v=17"></script>
-  <script src="app.js?v=17"></script>
+  <script src="curriculum-data.js?v=18"></script>
+  <script src="app.js?v=18"></script>
 </body>
 </html>
