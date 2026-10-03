@@ -161,64 +161,87 @@ function renderLearningPaths() {
     }).filter(p => p.courses.length > 0);
   }
 
+  renderHeroStats();
+
   if (filteredPaths.length === 0) {
     container.innerHTML = `
-      <div style="text-align: center; padding: 60px 20px; background: var(--bg-container); border-radius: 16px; border: 1px dashed var(--border-subtle); margin-top: 20px;">
-        <h3 style="font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 8px;">No Courses Found</h3>
-        <p style="font-size: 14px; color: var(--text-secondary); margin-bottom: 20px;">Try searching for "Relativity", "Kinematics", "Nuclear", "Thermodynamics", or "Optics".</p>
-        <button class="action-start-btn" style="margin: 0 auto;" onclick="filterBySubject('All')">Clear Search &amp; Show All</button>
+      <div class="paths-empty">
+        <h3 class="paths-empty-title">No courses found</h3>
+        <p class="paths-empty-text">Try searching for "Relativity", "Kinematics", "Nuclear", "Thermodynamics", or "Optics".</p>
+        <button class="action-start-btn" style="margin: 0 auto;" onclick="filterBySubject('All')">Clear search &amp; show all</button>
       </div>
     `;
     return;
   }
 
-  container.innerHTML = filteredPaths.map(path => {
+  container.innerHTML = filteredPaths.map((path, index) => {
     const pathCourses = path.courses || [];
     const doneCount = pathCourses.filter(c => appState.completedCourses[c.id]).length;
     const pathPct = pathCourses.length ? Math.round((doneCount / pathCourses.length) * 100) : 0;
+    const unitLetter = (String(path.id).match(/unit-([a-z])$/i) || [])[1] || String.fromCharCode(65 + index);
+    const accent = path.color || '#4f5df5';
 
     return `
-    <div class="path-section" id="${path.id}">
+    <section class="path-section" id="${path.id}" style="--path-accent: ${accent};" aria-labelledby="${path.id}-title">
       <div class="path-section-header">
-        <div class="path-section-text" style="flex: 1;">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px;">
-            <div>
-              <h3 class="path-section-title">${path.title}</h3>
-              <p class="path-section-desc">${path.subtitle}</p>
-            </div>
-            <div style="min-width: 180px; text-align: right;">
-              <div style="font-size: 12px; font-weight: 700; color: #38bdf8; margin-bottom: 4px;">
-                ${doneCount}/${pathCourses.length} Chapters (${pathPct}%)
-              </div>
-              <div class="path-progress-track" style="height: 6px;">
-                <div class="path-progress-fill" style="width: ${pathPct}%;"></div>
-              </div>
-            </div>
+        <div class="path-section-text">
+          <span class="path-section-meta">Unit ${unitLetter.toUpperCase()} &middot; ${pathCourses.length} ${pathCourses.length === 1 ? 'chapter' : 'chapters'}</span>
+          <h2 class="path-section-title" id="${path.id}-title">${path.title}</h2>
+          <p class="path-section-desc">${path.subtitle}</p>
+        </div>
+        <div class="path-progress" title="${pathPct}% complete">
+          <div class="path-progress-label"><strong>${doneCount}/${pathCourses.length}</strong> complete</div>
+          <div class="path-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pathPct}">
+            <div class="path-progress-fill" style="width: ${pathPct}%;"></div>
           </div>
         </div>
       </div>
 
       <div class="path-track-container">
-        ${path.courses.map(c => {
+        ${pathCourses.map(c => {
           const isDone = !!appState.completedCourses[c.id];
           const isNew = c.id === 'ch-25';
+          const num = (String(c.id).match(/(\d+)$/) || [])[1];
           return `
-            <a class="course-tile" data-course-id="${c.id}" href="chapter.html?id=${c.id}">
-              <div class="tile-box" style="${isDone ? 'border-color: #22c55e;' : ''}">
+            <a class="course-tile${isDone ? ' is-done' : ''}" data-course-id="${c.id}" href="chapter.html?id=${c.id}"${isDone ? ' aria-label="' + c.title + ' (completed)"' : ''}>
+              <div class="tile-box">
+                ${num ? `<span class="tile-num">${String(num).padStart(2, '0')}</span>` : ''}
                 ${isNew ? '<span class="tile-tag-new">NEW</span>' : ''}
+                ${isDone ? '<span class="tile-done" aria-hidden="true"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>' : ''}
                 <div class="tile-icon-wrap" style="background: ${getCourseGradient(c)};">
                   ${renderTileIcon(c)}
                 </div>
               </div>
               <span class="tile-title">${c.title}</span>
-              ${isDone ? `<span style="font-size: 11px; color: #22c55e; font-weight: 700;">✓ Completed</span>` : ''}
             </a>
           `;
         }).join('')}
       </div>
-    </div>
+    </section>
     `;
   }).join('');
+}
+
+function renderHeroStats() {
+  const el = document.getElementById('hero-stats');
+  if (!el) return;
+
+  const paths = curriculum.learningPaths || [];
+  const total = paths.reduce((n, p) => n + (p.courses || []).length, 0);
+  const done = paths.reduce((n, p) => n + (p.courses || []).filter(c => appState.completedCourses[c.id]).length, 0);
+  const pct = total ? Math.round((done / total) * 100) : 0;
+
+  el.innerHTML = `
+    <div class="hero-stat"><span class="hero-stat-value">${total}</span><span class="hero-stat-label">Chapters</span></div>
+    <div class="hero-stat"><span class="hero-stat-value">${paths.length}</span><span class="hero-stat-label">Units</span></div>
+    <div class="hero-stat hero-stat-progress">
+      <span class="hero-stat-value">${pct}%</span>
+      <span class="hero-stat-label">${done} of ${total} complete</span>
+      <div class="path-progress-track" role="progressbar" aria-label="Overall progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}">
+        <div class="path-progress-fill" style="width: ${pct}%;"></div>
+      </div>
+    </div>
+  `;
 }
 
 function getCourseGradient(course) {
