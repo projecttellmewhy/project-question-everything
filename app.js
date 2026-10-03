@@ -224,7 +224,7 @@ function renderLearningPaths() {
 function getCourseGradient(course) {
   const grads = {
     'ch-1': 'linear-gradient(135deg, #07152b, #0e2447)',
-    'ch-2': 'linear-gradient(135deg, #312e81, #6366f1)',
+    'ch-2': '#3d9bff',
     'ch-3': 'linear-gradient(135deg, #78350f, #d97706)',
     'ch-4': 'linear-gradient(135deg, #831843, #ec4899)',
     'ch-5': 'linear-gradient(135deg, #0f172a, #0284c7)',
@@ -293,18 +293,59 @@ function renderTileIcon(courseOrType) {
       <circle cx="24.5" cy="22.5" r="1" fill="#ffffff"/>
     </svg>`,
 
-    // 2. Forces and Newton's laws: mass block with balanced & net force vectors
-    'ch-2': `<svg width="100%" height="100%" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <rect x="11" y="11" width="10" height="10" rx="2" fill="rgba(99, 102, 241, 0.35)" stroke="#a5b4fc" stroke-width="1.8"/>
-      <text x="16" y="18" fill="#ffffff" font-size="8" font-family="sans-serif" font-weight="800" text-anchor="middle" dominant-baseline="middle">m</text>
-      <path d="M21 16 L 28 16" stroke="#22c55e" stroke-width="2" stroke-linecap="round"/>
-      <polygon points="27,13.5 30.5,16 27,18.5" fill="#22c55e"/>
-      <path d="M11 16 L 4 16" stroke="#f43f5e" stroke-width="2" stroke-linecap="round"/>
-      <polygon points="5,13.5 1.5,16 5,18.5" fill="#f43f5e"/>
-      <path d="M16 11 L 16 4" stroke="#38bdf8" stroke-width="1.8" stroke-linecap="round"/>
-      <polygon points="13.5,5 16,1.5 18.5,5" fill="#38bdf8"/>
-      <path d="M16 21 L 16 28" stroke="#c084fc" stroke-width="1.8" stroke-linecap="round"/>
-      <polygon points="13.5,27 16,30.5 18.5,27" fill="#c084fc"/>
+    // 2. Forces and Newton's laws: cartoon scientist in a curly wig beside the F = ma equation
+    'ch-2': `<svg width="100%" height="100%" viewBox="0 0 40 40" class="full-bleed-svg" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <rect width="40" height="40" fill="#3d9bff"/>
+
+      <!-- Wig (back layer, soft shadow tone) -->
+      <g fill="#d7dad6">
+        <circle cx="24.5" cy="13" r="5"/>
+        <circle cx="29" cy="8" r="5"/>
+        <circle cx="35" cy="8.5" r="5"/>
+        <circle cx="39" cy="14" r="4.5"/>
+        <circle cx="39.5" cy="21" r="4.2"/>
+        <circle cx="38" cy="28" r="4.5"/>
+        <circle cx="24" cy="20.5" r="4.5"/>
+        <circle cx="25" cy="28" r="4.2"/>
+      </g>
+      <!-- Wig (front layer, highlight tone) -->
+      <g fill="#e8eae7">
+        <circle cx="24" cy="12" r="4.4"/>
+        <circle cx="28.5" cy="7" r="4.4"/>
+        <circle cx="34.5" cy="7.5" r="4.4"/>
+        <circle cx="38.5" cy="13" r="4"/>
+        <circle cx="23.5" cy="19.5" r="4"/>
+        <circle cx="38" cy="27" r="4"/>
+      </g>
+
+      <!-- Red coat -->
+      <path d="M21 40 Q24 31.5 31 31 Q38 31.5 40 36 L40 40 Z" fill="#ee3a24"/>
+      <!-- Neck -->
+      <rect x="28.5" y="25" width="5" height="7" rx="1.5" fill="#fdd5ac"/>
+
+      <!-- Face -->
+      <ellipse cx="31" cy="19" rx="6.6" ry="8.4" fill="#fdd5ac"/>
+
+      <!-- Wig fringe curling over the forehead -->
+      <g fill="#e8eae7">
+        <circle cx="26.8" cy="10.8" r="3"/>
+        <circle cx="31.4" cy="9.6" r="3"/>
+        <circle cx="35.6" cy="11.2" r="2.6"/>
+      </g>
+      <circle cx="30" cy="8.6" r="1.7" fill="#ffffff"/>
+
+      <!-- Worried brows, eyes, nose and smile -->
+      <path d="M27.2 16.9 L30.4 15.5 M32.4 15.5 L35.6 16.9" stroke="#111" stroke-width="1" stroke-linecap="round"/>
+      <circle cx="29.2" cy="18.6" r="1" fill="#111"/>
+      <circle cx="33.8" cy="18.6" r="1" fill="#111"/>
+      <circle cx="29.5" cy="18.3" r="0.3" fill="#fff"/>
+      <circle cx="34.1" cy="18.3" r="0.3" fill="#fff"/>
+      <path d="M31.4 19.8 Q29.9 23 32.4 23.2" stroke="#e8b98a" stroke-width="0.9" stroke-linecap="round"/>
+      <path d="M28.8 25.4 Q31.4 26.6 34 25.2" stroke="#c98f63" stroke-width="0.6" stroke-linecap="round"/>
+
+      <!-- Equation -->
+      <text x="1.5" y="14" fill="#ffffff" font-size="4.2" font-family="'Arial Rounded MT Bold','Trebuchet MS',Arial,sans-serif" font-weight="900" letter-spacing="0.3">FORCE</text>
+      <text x="1.5" y="24.5" fill="#ffffff" font-size="8" font-family="'Arial Rounded MT Bold','Trebuchet MS',Arial,sans-serif" font-weight="900">F=ma</text>
     </svg>`,
 
     // 3. Work, energy and power: power flash and energetic pulse
